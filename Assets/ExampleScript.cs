@@ -17,22 +17,18 @@ public class ExampleScript : MonoBehaviour
         
         MeshFilter[] meshFilters = GetComponentsInChildren<MeshFilter>();
         CombineInstance[] combine = new CombineInstance[meshFilters.Length - 1];
-        Debug.Log(meshFilters.Length);
+        
         int i = 1;
         while (i < meshFilters.Length)
         {
-            combine[i - 1].mesh = meshFilters[i].sharedMesh;
+            combine[i - 1].mesh = meshFilters[i].mesh;
             combine[i - 1].transform = meshFilters[i].transform.localToWorldMatrix;
             meshFilters[i].gameObject.SetActive(false);
-
+            
             i++;
         }
         transform.GetComponent<MeshFilter>().mesh = new Mesh();
         transform.GetComponent<MeshFilter>().mesh.CombineMeshes(combine);
         transform.gameObject.SetActive(true);
-        
-        transform.localScale = new Vector3();
-        transform.rotation = Quaternion.identity;
-        transform.position = Vector3.zero;
     }
 }
