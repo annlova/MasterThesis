@@ -48,34 +48,53 @@ public class WorldGenerator : MonoBehaviour
 
         Combine();
     }
-    
+
     public void Combine()
     {
         MeshFilter[] meshFilters = GetComponentsInChildren<MeshFilter>();
         CombineInstance[] combine = new CombineInstance[meshFilters.Length - 1];
-        Debug.Log(meshFilters.Length);
         
         int i = 1;
         while (i < meshFilters.Length)
         {
-            combine[i - 1].mesh = meshFilters[i].sharedMesh;
+            combine[i - 1].mesh = meshFilters[i].mesh;
             combine[i - 1].transform = meshFilters[i].transform.localToWorldMatrix;
             meshFilters[i].gameObject.SetActive(false);
-
+            
             i++;
         }
-        
-        var meshFilter = transform.GetComponent<MeshFilter>();
-        Debug.Log(meshFilter == meshFilters[0]);
-        meshFilter.mesh = new Mesh();
-        meshFilter.mesh.CombineMeshes(combine);
-        GetComponent<MeshCollider>().sharedMesh = meshFilter.mesh;
+        transform.GetComponent<MeshFilter>().mesh = new Mesh();
+        transform.GetComponent<MeshFilter>().mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        transform.GetComponent<MeshFilter>().mesh.CombineMeshes(combine);
         transform.gameObject.SetActive(true);
-
-        transform.localScale = new Vector3();
-        transform.rotation = Quaternion.identity;
-        transform.position = Vector3.zero;
     }
+    // public void Combine()
+    // {
+    //     MeshFilter[] meshFilters = GetComponentsInChildren<MeshFilter>();
+    //     CombineInstance[] combine = new CombineInstance[meshFilters.Length - 1];
+    //     Debug.Log(meshFilters.Length);
+    //     
+    //     int i = 1;
+    //     while (i < meshFilters.Length)
+    //     {
+    //         combine[i - 1].mesh = meshFilters[i].sharedMesh;
+    //         combine[i - 1].transform = meshFilters[i].transform.localToWorldMatrix;
+    //         meshFilters[i].gameObject.SetActive(false);
+    //
+    //         i++;
+    //     }
+    //     
+    //     var meshFilter = transform.GetComponent<MeshFilter>();
+    //     Debug.Log(meshFilter == meshFilters[0]);
+    //     meshFilter.mesh = new Mesh();
+    //     meshFilter.mesh.CombineMeshes(combine);
+    //     GetComponent<MeshCollider>().sharedMesh = meshFilter.mesh;
+    //     transform.gameObject.SetActive(true);
+    //
+    //     transform.localScale = new Vector3();
+    //     transform.rotation = Quaternion.identity;
+    //     transform.position = Vector3.zero;
+    // }
 
     // Update is called once per frame
     void Update()
