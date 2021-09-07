@@ -9,31 +9,72 @@ public class WorldGenerator : MonoBehaviour
     [SerializeField] private int _elevationRangeMax;
 
     [SerializeField] private GameObject _tileObject;
-    [SerializeField] private float _tileObjectSize;
-    
+    [SerializeField] private int _acreSize;
+
     private World _world;
-    
+
     // Start is called before the first frame update
     void Start()
     {
-        _world = new World(_mapWidth, _mapHeight, _elevationRangeMin, _elevationRangeMax);
+        _world = new World(_mapWidth, _mapHeight, _acreSize, _elevationRangeMin, _elevationRangeMax);
         _world.GenerateAcres();
         
         var acres = _world._acres;
         
-        for (int x = 0; x < _mapWidth; x++)
+        for (int acreX = 0; acreX < _mapWidth; acreX++)
         {
-            for (int y = 0; y < _mapHeight; y++)
+            for (int acreY = 0; acreY < _mapHeight; acreY++)
             {
-                float height = acres[x, y]._elevation - 1;
+                var acre = acres[acreX, acreY];
+                _world.GenerateAcre(acre);
+                
+                float height = acres[acreX, acreY]._elevation - 1;
                 if (height < 0.0f)
                 {
                     height = 0.0f;
                 }
-                Vector3 position = new Vector3(x * _tileObjectSize + _tileObjectSize / 2.0f, height * 2.0f, (_mapHeight - 1 - y) * _tileObjectSize + _tileObjectSize / 2.0f);
-                Instantiate(_tileObject, position, Quaternion.identity, transform);
+                
+                for (int tileX = 0; tileX < acre._size; tileX++)
+                {
+                    for (int tileY = 0; tileY < acre._size; tileY++)
+                    {
+                        var rng = Random.Range(-0.3f, 0.3f);
+                        Vector3 position = new Vector3(acreX * _acreSize + tileX, height * 2.0f + rng, (_mapHeight - 1 - acreY) * _acreSize + tileY);
+                        Instantiate(_tileObject, position, Quaternion.identity, transform);
+                    }
+                }
             }
         }
+
+        Combine();
+    }
+    
+    public void Combine()
+    {
+        MeshFilter[] meshFilters = GetComponentsInChildren<MeshFilter>();
+        CombineInstance[] combine = new CombineInstance[meshFilters.Length - 1];
+        Debug.Log(meshFilters.Length);
+        
+        int i = 1;
+        while (i < meshFilters.Length)
+        {
+            combine[i - 1].mesh = meshFilters[i].sharedMesh;
+            combine[i - 1].transform = meshFilters[i].transform.localToWorldMatrix;
+            meshFilters[i].gameObject.SetActive(false);
+
+            i++;
+        }
+        
+        var meshFilter = transform.GetComponent<MeshFilter>();
+        Debug.Log(meshFilter == meshFilters[0]);
+        meshFilter.mesh = new Mesh();
+        meshFilter.mesh.CombineMeshes(combine);
+        GetComponent<MeshCollider>().sharedMesh = meshFilter.mesh;
+        transform.gameObject.SetActive(true);
+
+        transform.localScale = new Vector3();
+        transform.rotation = Quaternion.identity;
+        transform.position = Vector3.zero;
     }
 
     // Update is called once per frame
@@ -49,6 +90,8 @@ public class World
     private int _width;
     /// <summary>Height in acres.</summary>
     private int _height;
+    /// <summary>Number of tiles along an acre edge.</summary>
+    private int _acreSize;
     /// <summary>Acre data.</summary>
     public Acre[,] _acres { get; }
 
@@ -56,16 +99,20 @@ public class World
     private int _elevationRangeMax;
     private int _maxLayers;
 
-    public World(int width, int height, int elevationRangeMin, int elevationRangeMax)
+    public World(int width, int height, int acreSize, int elevationRangeMin, int elevationRangeMax)
     {
         _width = width;
         _height = height;
+        _acreSize = acreSize;
         _acres = new Acre[width, height];
 
         _elevationRangeMin = elevationRangeMin;
         _elevationRangeMax = elevationRangeMax;
     }
     
+    /// <summary>
+    /// Generate layout of all acres and data corresponding to an acre "chunk".
+    /// </summary>
     public void GenerateAcres()
     {
         // Calculate number of layers
@@ -109,10 +156,100 @@ public class World
             }
         }
     }
+
+    /// <summary>
+    /// Generate all data for a single acre.
+    /// </summary>
+    public void GenerateAcre(Acre acre)
+    {
+        InitializeAcreTiles(acre);
+        GenerateCliff();
+    }
+
+    /// <summary>
+    /// Initializes Acre tiles array with FLAT tiles.
+    /// </summary>
+    /// <param name="acre">The acre to work with.</param>
+    public void InitializeAcreTiles(Acre acre)
+    {
+        acre._size = _acreSize;
+        acre._tiles = new Tile[acre._size, acre._size];
+        for (int x = 0; x < acre._size; x++)
+        {
+            for (int y = 0; y < acre._size; y++)
+            {
+                acre._tiles[x, y] = new Tile(Tile.TileType.Flat);
+            }
+        }
+    }
+
+    public void GenerateCliff()
+    {
+        
+    }
 }
 
 public class Acre
 {
     public int _elevation;
     public bool _river;
+
+    public int _size;
+    public Tile[,] _tiles;
+}
+
+public class Tile
+{
+    public TileType _type;
+
+    public Tile(TileType type)
+    {
+        _type = type;
+    }
+    
+    public enum TileType
+    {
+        None,
+        Flat,
+        
+        EdgeN,
+        EdgeE,
+        EdgeS,
+        EdgeW,
+        
+        EdgeMidN,
+        EdgeMidE,
+        EdgeMidS,
+        EdgeMidW,
+        
+        MidMidNE,
+        MidMidSE,
+        MidMidSW,
+        MidMidNW,
+        
+        MidMidNEInv,
+        MidMidSEInv,
+        MidMidSWInv,
+        MidMidNWInv,
+        
+        CornerMidNE,
+        CornerMidSE,
+        CornerMidSW,
+        CornerMidNW,
+        
+        CornerMidNEInv,
+        CornerMidSEInv,
+        CornerMidSWInv,
+        CornerMidNWInv,
+        
+        CornerMidMirNE,
+        CornerMidMirSE,
+        CornerMidMirSW,
+        CornerMidMirNW,
+        
+        CornerMidMirNEInv,
+        CornerMidMirSEInv,
+        CornerMidMirSWInv,
+        CornerMidMirNWInv,
+    }
 }
