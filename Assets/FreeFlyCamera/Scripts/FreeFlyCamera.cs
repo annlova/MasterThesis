@@ -213,5 +213,12 @@ public class FreeFlyCamera : MonoBehaviour
             transform.position = _initPosition;
             transform.eulerAngles = _initRotation;
         }
+        
+        // Switch to Player camera
+        if (Input.GetKey(KeyCode.B))
+        {
+            GetComponent<CameraController>().enabled = true;
+            GetComponent<FreeFlyCamera>().enabled = false;
+        }
     }
 }

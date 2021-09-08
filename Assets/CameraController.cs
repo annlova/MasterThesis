@@ -21,10 +21,21 @@ public class CameraController : MonoBehaviour {
         //offset = transform.position - player.transform.position;
     }
 
+    // Switch to freefly camera
+    void SwitchToFreeFlyCamera()
+    {
+        if (Input.GetKey(KeyCode.V))
+        {
+            GetComponent<FreeFlyCamera>().enabled = true;
+            GetComponent<CameraController>().enabled = false;
+        }
+    }
+
     // LateUpdate is called after Update each frame
     void LateUpdate () 
     {
         // Set the position of the camera's transform to be the same as the player's, but offset by the calculated offset distance.
         transform.SetPositionAndRotation(player.transform.position + offset, Quaternion.AngleAxis(angle, Vector3.right));
+        SwitchToFreeFlyCamera();
     }
 }
