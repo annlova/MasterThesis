@@ -7,7 +7,7 @@ public class MapEditor : MonoBehaviour
 
   public Map mMap;
   public GameObject mPrefab;   
-  // public ColorPrefab[] colorMappings;
+  public ColorPrefab[] colorMappings;
     
     // Start is called before the first frame update
     void Start()
