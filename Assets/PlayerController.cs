@@ -18,38 +18,50 @@ public class PlayerController : MonoBehaviour
 
     // The current speed of the character
     private float _speed;
+    
     // The current direction of the character
     private Vector3 _direction;
 
     // The character controller
     private CharacterController _controller;
+
+    private Animator _animator;
     
     // Start is called before the first frame update
     void Start()
     {
         _controller = GetComponent<CharacterController>();
         _direction = new Vector3(0.0f, 0.0f, 1.0f);
+
+        _animator = GetComponent<Animator>();
     }
 
     // Update is called once per frame
     void Update()
     {
         Move();
+        
+        _animator.SetFloat("Speed", _speed);
     }
 
     private void Move()
     {
+        // Get direction and tilt from gamepad
         var (dir, tilt) = GetMoveInput();
-
+        
+        // Calculate player speed based on tilt
         CalculateSpeed(tilt);
 
+        // Get angle rotated from current player position
         var angleRotated = CalculateRotation(dir);
         
-        // Calculate this frame's translation vector
+        // Calculate this frame's translation vector, i.e. how far to move character
         var translationVector = _direction * (_speed * Time.deltaTime);
+        
         
         // Move character
         _controller.Move(translationVector);
+        
         // Rotate character
         transform.Rotate(Vector3.up, angleRotated);
     }

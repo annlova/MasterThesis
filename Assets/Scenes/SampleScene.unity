@@ -669,8 +669,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   player: {fileID: 1613587637}
-  offset: {x: 0, y: 0, z: -7.02}
-  angle: 60
+  offset: {x: 0, y: 0, z: 0}
+  angle: 0
 --- !u!4 &979467729 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: abc9c66560db3a147aa355c8dba66887, type: 3}
@@ -1131,7 +1131,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fad67b2217927ee4a800192e8da0a3c6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _maxSpeed: 10
+  _maxSpeed: 2
   _acceleration: 10
   _rotationSpeed: 1080
 --- !u!136 &1613587641
