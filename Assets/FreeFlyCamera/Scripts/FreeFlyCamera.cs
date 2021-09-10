@@ -98,6 +98,7 @@ public class FreeFlyCamera : MonoBehaviour
 
     private void Start()
     {
+
         _initPosition = transform.position;
         _initRotation = transform.eulerAngles;
     }

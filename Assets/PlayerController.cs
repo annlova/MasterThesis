@@ -1,6 +1,8 @@
 using System;
 using System.Numerics;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Quaternion = UnityEngine.Quaternion;
 using Vector2 = UnityEngine.Vector2;
 using Vector3 = UnityEngine.Vector3;
@@ -8,7 +10,10 @@ using Vector3 = UnityEngine.Vector3;
 public class PlayerController : MonoBehaviour
 {
     [SerializeField]
-    private float _maxSpeed;
+    private float _maxSpeedWalk;
+
+    [SerializeField]
+    private float _maxSpeedRun;
     
     [SerializeField]
     private float _acceleration;
@@ -26,10 +31,14 @@ public class PlayerController : MonoBehaviour
     private CharacterController _controller;
 
     private Animator _animator;
+
+    private FreeFlyCamera _Camera;
     
     // Start is called before the first frame update
     void Start()
     {
+        _Camera = GameObject.Find("Main Camera").GetComponent<FreeFlyCamera>();
+        
         _controller = GetComponent<CharacterController>();
         _direction = new Vector3(0.0f, 0.0f, 1.0f);
 
@@ -39,9 +48,21 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Move();
-        
+        if (!FreeFlying())
+        {
+            Move();   
+        }
+
         _animator.SetFloat("Speed", _speed);
+    }
+
+    private bool FreeFlying()
+    {
+        if (_Camera.enabled)
+        {
+            return true;   
+        }
+        return false;
     }
 
     private void Move()
@@ -90,17 +111,37 @@ public class PlayerController : MonoBehaviour
     /// <param name="tilt">The input tilt factor</param>
     private void CalculateSpeed(float tilt)
     {
-        if (tilt > 0.0f)
+        
+        switch (tilt > 0.0f)
         {
-            _speed += _acceleration * tilt * Time.deltaTime;
-            if (_speed > _maxSpeed * tilt)
+
+            // Check if running button is down as well as joystick is tilted
+            case true when Input.GetButton("Fire3"):
+                
             {
-                _speed = _maxSpeed * tilt;
+                _speed += _acceleration * tilt * Time.deltaTime;
+                if (_speed > _maxSpeedRun * tilt)
+                {
+                    _speed = _maxSpeedRun * tilt;
+                }
+
+                break;
             }
-        }
-        else
-        {
-            _speed = 0.0f;
+            
+            // Check if joystick is tilted
+            case true:
+            {
+                _speed += _acceleration * tilt * Time.deltaTime;
+                if (_speed > _maxSpeedWalk * tilt)
+                {
+                    _speed = _maxSpeedWalk * tilt;
+                }
+
+                break;
+            }
+            default:
+                _speed = 0.0f;
+                break;
         }
     }
 
