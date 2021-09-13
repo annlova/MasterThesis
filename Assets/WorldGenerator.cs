@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Assertions;
+using UnityEngine.PlayerLoop;
 using UnityEngine.UIElements;
 using Random = UnityEngine.Random;
 
@@ -33,29 +34,34 @@ public class WorldGenerator : MonoBehaviour
         {
             for (int acreY = 0; acreY < _mapHeight; acreY++)
             {
-
                 var acre = acres[acreX, acreY];
-                float height = acre._elevation * 2;
                 
                 for (int tileX = 0; tileX < _acreSize; tileX++)
                 {
                     for (int tileY = 0; tileY < _acreSize; tileY++)
                     {
                         var tile = acre._tiles[tileX, tileY];
-                        Vector3 position = new Vector3(acreX * _acreSize + tileX, height, (_mapHeight - 1 - acreY) * _acreSize + (_acreSize - 1 - tileY));
+                        var position = new Vector3(acreX * _acreSize + tileX, tile._elevation * 2, (_mapHeight - 1 - acreY) * _acreSize + (_acreSize - 1 - tileY));
                         if (tile._isCliff)
                         {
-                            Instantiate(tile._cliffTile._prefab, position + Vector3.down * 2, tile._cliffTile._prefab.transform.rotation, transform);
+                            for (int i = tile._floor; i < tile._elevation; i++)
+                            {
+                                var p = new Vector3(position.x, i * 2, position.z);
+                                Instantiate(tile._cliffTile._prefab, p, tile._cliffTile._prefab.transform.rotation, transform);
+                            }
+
+                            var floorPosition = new Vector3(position.x, tile._floor * 2, position.z);
+                            Instantiate(_tileObject, floorPosition, Quaternion.identity, transform);
                         }
                         else
                         {
-                            Instantiate(_tileObject, position + Vector3.down * 2 * tile._deelevation, Quaternion.identity, transform);
+                            Instantiate(_tileObject, position, Quaternion.identity, transform);
                         }
                     }
                 }
             }
         }
-
+            
         Combine();
     }
 
@@ -70,6 +76,11 @@ public class WorldGenerator : MonoBehaviour
             combine[i - 1].mesh = meshFilters[i].mesh;
             combine[i - 1].transform = meshFilters[i].transform.localToWorldMatrix;
             meshFilters[i].gameObject.SetActive(false);
+            var collider = meshFilters[i].gameObject.transform.Find("Collider");
+            if (collider)
+            {
+                collider.transform.SetParent(transform);
+            }
             
             i++;
         }
@@ -154,16 +165,21 @@ public class World
                 {
                     elevation = 0;
                 }
-
-                // TODO: TEMP CODE REMOVE
-                if (x == 0 && y < _height - 1)
+                
+                // TODO remove
+                if (x == 0 && y < 2)
                 {
-                    elevation = 1;
-                }else if (x == 1 && y == _height - 2)
+                    elevation = 2;
+                }
+                else if (x == 0 && y >= 2)
                 {
                     elevation = 0;
                 }
-                
+                else if (x == 1 && y < 3)
+                {
+                    elevation = 1;
+                }
+
                 var acre = new Acre(x, y, elevation);
                 _acres[x, y] = acre;
             }
@@ -181,23 +197,9 @@ public class World
         // "Walk" each island perimeter, marking cliff tiles along the way
         MarkCliffTiles(highestIslandIndex);
         
-        // TODO: remove
-        // for (int x = 0; x < _width; x++)
-        // {
-        //     for (int y = 0; y < _height; y++)
-        //     {
-        //         GenerateAcre(x, y);
-        //     }
-        // }
-        //
-        // // TODO: Refactor generation code to have a cleaner solution that does not require a special pass for right hand cliffs
-        // for (int x = _width - 1; x >= 0; x--)
-        // {
-        //     for (int y = _height - 1; y >= 0; y--)
-        //     {
-        //         SpecialPassMarkRightHandsideCliffs(x, y);
-        //     }
-        // }
+        LevelTerrain();
+        
+        CalculateCliffFloors();
     }
 
     /// <summary>
@@ -212,7 +214,7 @@ public class World
         {
             for (int y = 0; y < acre._size; y++)
             {
-                acre._tiles[x, y] = new Tile(Tile.TileType.Flat);
+                acre._tiles[x, y] = new Tile(acre._elevation);
             }
         }
     }
@@ -220,14 +222,18 @@ public class World
     private int CalculateIslands()
     {
         int islandIndex = 0;
-        for (int x = 0; x < _width; x++)
+        for (int layer = _maxLayers; layer >= 0; layer--)
         {
-            for (int y = 0; y < _height; y++)
+            for (int x = 0; x < _width; x++)
             {
-                if (_acres[x, y]._islandIndex < 0)
+                for (int y = 0; y < _height; y++)
                 {
-                    ConnectNeighbours(_acres[x, y], islandIndex);
-                    islandIndex++;
+                    if (_acres[x, y]._islandIndex < 0 &&
+                        _acres[x, y]._elevation == layer)
+                    {
+                        ConnectNeighbours(_acres[x, y], islandIndex);
+                        islandIndex++;
+                    }
                 }
             }
         }
@@ -235,17 +241,11 @@ public class World
         return islandIndex - 1;
     }
 
-    private int temp = 0;
     private void ConnectNeighbours(Acre acre, int islandIndex)
     {
-        temp++;
         int x = acre._x;
         int y = acre._y;
         acre._islandIndex = islandIndex;
-        if (islandIndex == 0)
-        {
-            Debug.Log(x + ", " + y);
-        }
 
         Acre[] neighbours = new Acre[4];
         neighbours[0] = x > 0 ? _acres[x - 1, y] : null;
@@ -304,7 +304,7 @@ public class World
             acre._islandIndex == w._islandIndex &&
             nw._elevation < acre._elevation)
         {
-            acre._hasNorthWestCliff = true;
+            throw new Exception("Not possible!");
         }
 
         if (n != null && e != null && ne != null &&
@@ -312,41 +312,44 @@ public class World
             acre._islandIndex == e._islandIndex &&
             ne._elevation < acre._elevation)
         {
-            acre._hasNorthEastCliff = true;
+            throw new Exception("Not possible!");
         }
 
         if (s != null && e != null && se != null &&
-            acre._islandIndex == s._islandIndex &&
-            acre._islandIndex == e._islandIndex &&
-            se._elevation < acre._elevation)
+            (acre._islandIndex == s._islandIndex &&
+             acre._islandIndex == e._islandIndex &&
+             se._elevation < acre._elevation ||
+             s._elevation == e._elevation &&
+             se._elevation < s._elevation))
         {
             acre._hasSouthEastCliff = true;
         }
 
         if (s != null && w != null && sw != null &&
-            acre._islandIndex == s._islandIndex &&
-            acre._islandIndex == w._islandIndex &&
-            sw._elevation < acre._elevation)
+            (acre._islandIndex == s._islandIndex &&
+            acre._islandIndex <= w._elevation &&
+            sw._elevation < acre._elevation ||
+            s._elevation <= w._elevation &&
+            sw._elevation < s._elevation))
         {
             acre._hasSouthWestCliff = true;
         }
     }
-
-    private void MarkCliffTiles(int highestIslandIndex)
+    
+    public void MarkCliffTiles(int highestIslandIndex)
     {
         for (int islandIndex = 0; islandIndex <= highestIslandIndex; islandIndex++)
         {
-            var startAcre = FindLeftBottomMostAcre(islandIndex);
-            if (startAcre._elevation == 0)
+            var startAcre = FindStartAcre(islandIndex);
+            if (startAcre._elevation == 0 || startAcre._cliffWalked)
             {
                 continue;
             }
-            new CliffWalkAgent(_cliffTiles, startAcre, _maxCliffEat).Walk(_acres, _width, _height);
+            new CliffWalkAgent(_acres, _width, _height, _cliffTiles, startAcre, _maxCliffEat).Walk(_acres, _width, _height);
         }
-
     }
 
-    private Acre FindLeftBottomMostAcre(int islandIndex)
+    private Acre FindStartAcre(int islandIndex)
     {
         Acre acre = null;
         for (int x = 0; x < _width; x++)
@@ -356,6 +359,10 @@ public class World
                 if (_acres[x, y]._islandIndex == islandIndex)
                 {
                     acre = _acres[x, y];
+                    if (acre._hasWestCliff)
+                    {
+                        return acre;
+                    }
                 }
             }
 
@@ -363,12 +370,110 @@ public class World
             {
                 return acre;
             }
-            Debug.Log("x: " + x);
         }
 
         throw new Exception("This code should not be reached :(.");
     }
 
+    private void LevelTerrain()
+    {
+        for (int y = 0; y < _acreSize * _height; y++)
+        {
+            for (int x = 0; x < _acreSize * _width; x++)
+            {
+                ComputeConnectedTiles(x, y);
+            }
+        }
+    }
+
+    private void ComputeConnectedTiles(int x, int y)
+    {
+        var list = new List<Tile>();
+        int lowest = _maxLayers;
+        
+        var toVisit = new List<Vector2Int>();
+        toVisit.Add(new Vector2Int(x, y));
+        
+        for (int i = 0; i < toVisit.Count; i++)
+        {
+            var p = toVisit[i];
+            var acrePos = new Vector2Int(p.x / _acreSize, p.y / _acreSize);
+            var tilePos = new Vector2Int(p.x % _acreSize, p.y % _acreSize);
+            var tile = _acres[acrePos.x, acrePos.y]._tiles[tilePos.x, tilePos.y];
+            if (tile._isLeveled || tile._isCliff)
+            {
+                continue;
+            }
+            
+            list.Add(tile);
+            if (tile._elevation < lowest)
+            {
+                lowest = tile._elevation;
+            }
+            tile._isLeveled = true;
+            
+            var neighbours = new Vector2Int[4];
+            neighbours[0] = p.x > 0 ? new Vector2Int(p.x - 1, p.y) : new Vector2Int(-1, -1);
+            neighbours[1] = p.y > 0 ? new Vector2Int(p.x, p.y - 1) : new Vector2Int(-1, -1);
+            neighbours[2] = p.x < _acreSize * _width - 1 ? new Vector2Int(p.x + 1, p.y) : new Vector2Int(-1, -1);
+            neighbours[3] = p.y < _acreSize * _height - 1 ? new Vector2Int(p.x, p.y + 1) : new Vector2Int(-1, -1);
+            
+            foreach (var neighbour in neighbours)
+            {
+                if (neighbour != new Vector2Int(-1, -1))
+                {
+                    toVisit.Add(neighbour);
+                }
+            }
+        }
+
+        foreach (var tile in list)
+        {
+            tile._elevation = lowest;
+        }
+    }
+
+    private void CalculateCliffFloors()
+    {
+        for (int y = 0; y < _acreSize * _height; y++)
+        {
+            for (int x = 0; x < _acreSize * _width; x++)
+            {
+                var p = new Vector2Int(x, y);
+                var acrePos = new Vector2Int(p.x / _acreSize, p.y / _acreSize);
+                var tilePos = new Vector2Int(p.x % _acreSize, p.y % _acreSize);
+                var tile = _acres[acrePos.x, acrePos.y]._tiles[tilePos.x, tilePos.y];
+
+                if (!tile._isCliff)
+                {
+                    continue;
+                }
+
+                var neighbours = new Vector2Int[4];
+                neighbours[0] = p.x > 0 ? new Vector2Int(p.x - 1, p.y) : new Vector2Int(-1, -1);
+                neighbours[1] = p.y > 0 ? new Vector2Int(p.x, p.y - 1) : new Vector2Int(-1, -1);
+                neighbours[2] = p.x < _acreSize * _width - 1 ? new Vector2Int(p.x + 1, p.y) : new Vector2Int(-1, -1);
+                neighbours[3] = p.y < _acreSize * _height - 1 ? new Vector2Int(p.x, p.y + 1) : new Vector2Int(-1, -1);
+
+                int lowest = _maxLayers;
+                foreach (var neighbour in neighbours)
+                {
+                    if (neighbour != new Vector2Int(-1, -1))
+                    {
+                        var ap = new Vector2Int(neighbour.x / _acreSize, neighbour.y / _acreSize);
+                        var tp = new Vector2Int(neighbour.x % _acreSize, neighbour.y % _acreSize);
+                        var t = _acres[ap.x, ap.y]._tiles[tp.x, tp.y];
+                        if (!t._isCliff && t._elevation < lowest)
+                        {
+                            lowest = t._elevation;
+                        }
+                    }
+                }
+
+                tile._floor = lowest;
+            }
+        }
+    }
 }
 
 public class Acre
@@ -380,17 +485,12 @@ public class Acre
     public int _islandIndex;
 
     public bool _hasWestCliff;
-    public bool _hasNorthWestCliff;
-    public bool _hasNorthCliff;
-    public bool _hasNorthEastCliff;
     public bool _hasEastCliff;
     public bool _hasSouthEastCliff;
     public bool _hasSouthCliff;
     public bool _hasSouthWestCliff;
-    
-    public bool hasLeftCliff;
-    public bool hasBottomCliff;
-    public bool hasRightCliff;
+
+    public bool _cliffWalked;
     
     public int _size;
     public Tile[,] _tiles;
@@ -402,36 +502,43 @@ public class Acre
         _elevation = elevation;
         
         _hasWestCliff = false;
-        _hasNorthWestCliff = false;
-        _hasNorthCliff = false;
-        _hasNorthEastCliff = false;
         _hasEastCliff = false;
         _hasSouthEastCliff = false;
         _hasSouthCliff = false;
         _hasSouthWestCliff = false;
 
+        _cliffWalked = false;
+
         _islandIndex = -1;
+    }
+
+    public bool HasPerpendicularCliff(Vector2Int dir)
+    {
+        if (dir == Vector2Int.right && _hasWestCliff)
+        {
+            return true;
+        } else if (dir == Vector2Int.down && _hasSouthCliff)
+        {
+            return true;
+        }
+
+        return false;
     }
 }
 
 public class Tile
 {
-    public TileType _type;
+    public int _elevation;
     public bool _isCliff;
-    public int _deelevation;
+    public Vector2Int _cliffDirection;
     public CliffTile _cliffTile;
+    public int _floor;
 
-    public Tile(TileType type)
+    public bool _isLeveled;
+
+    public Tile(int elevation)
     {
-        _type = type;
-        if (type == TileType.Flat || type == TileType.None)
-        {
-            _isCliff = false;
-        }
-        else
-        {
-            _isCliff = true;
-        }
+        _elevation = elevation;
     }
     
     public enum TileType
@@ -487,18 +594,6 @@ public class CliffTile
     public GameObject _prefab;
 
     public CliffTileRule[] _rules;
-
-    public enum ConnectPoint
-    {
-        NorthWest = 0,
-        North = 1,
-        NorthEast = 2,
-        East = 3,
-        SouthEast = 4,
-        South = 5,
-        SouthWest = 6,
-        West = 7
-    }
 }
 
 [Serializable]
@@ -511,70 +606,191 @@ public class CliffTileRule
 
 public class CliffWalkAgent
 {
-    private CliffTile[] _cliffTiles;
-    private CliffTile.ConnectPoint _currentConnectPoint;
-
-    private Acre _currentAcre;
+    private Acre[,] _acres;
+    private int _width;
+    private int _height;
     
-    private int _islandIndex;
+    private CliffTile[] _cliffTiles;
+
+    private Acre _startAcre;
+    private Acre _currentAcre;
+    private int _cliffElevation;
+    
     private Vector2Int _forward;
     private Vector2Int _right;
     private Vector2Int _pos;
     
     private int _acreSize;
     private int _maxCliffEat;
-    public CliffWalkAgent(CliffTile[] cliffTiles, Acre startAcre, int maxCliffEat)
-    { 
-        _cliffTiles = cliffTiles;
-        _currentAcre = startAcre;
 
-        if (startAcre == null)
-        {
-            Debug.Log("hmm...");
-        }
-        _islandIndex = startAcre._islandIndex;
+    private bool _noDirectionChange;
+    
+    public CliffWalkAgent(Acre[,] acres, int width, int height, CliffTile[] cliffTiles, Acre startAcre, int maxCliffEat)
+    {
+        _acres = acres;
+        _width = width;
+        _height = height; 
+        _cliffTiles = cliffTiles;
+        _startAcre = startAcre;
+        _currentAcre = startAcre;
+        _cliffElevation = startAcre._elevation;
         _acreSize = startAcre._size;
         _maxCliffEat = maxCliffEat;
-        CalculateCliffWalkStart(startAcre);
+        _noDirectionChange = false;
+        CalculateCliffWalkStart(_currentAcre);
+    }
+
+    public CliffWalkAgent(Acre[,] acres, int width, int height, CliffTile[] cliffTiles, Acre startAcre, int maxCliffEat, int cliffElevation,
+        Vector2Int forward, Vector2Int pos)
+    {
+        _acres = acres;
+        _width = width;
+        _height = height; 
+        _cliffTiles = cliffTiles;
+        _currentAcre = startAcre;
+        _cliffElevation = cliffElevation;
+        _acreSize = startAcre._size;
+        _maxCliffEat = maxCliffEat;
+        _noDirectionChange = false;
+        ChangeDirection(forward);
+        _pos = pos;
     }
     
     private void CalculateCliffWalkStart(Acre startAcre)
     {
         if (startAcre._hasWestCliff)
         {
-            var startX = Random.Range(0, _maxCliffEat);
-            var startY = 0;
-            _pos = new Vector2Int(startX, startY);
-            
             _forward = new Vector2Int(0, 1);
             _right = new Vector2Int(-1, 0);
 
-            var rng = Random.Range(0, 3);
-            _currentConnectPoint = rng switch
+            var startX = Random.Range(0, _maxCliffEat);
+            var startY = 0;
+            
+            var neighbour = GetNeighbourAcre(-_forward);
+            if (neighbour != null &&
+                neighbour._hasSouthCliff)
             {
-                0 => CliffTile.ConnectPoint.NorthWest,
-                1 => CliffTile.ConnectPoint.North,
-                2 => CliffTile.ConnectPoint.NorthEast,
-                _ => throw new ArgumentOutOfRangeException()
-            };
+                bool done = false;
+                for (int y = _acreSize - 1; y >= _acreSize - _maxCliffEat; y--)
+                {
+                    for (int x = 0; x < _maxCliffEat; x++)
+                    {
+                        var t = neighbour._tiles[x, y];
+                        if (t._isCliff)
+                        {
+                            startX = x;
+                            startY = y + 1;
+                            if (startY >= _acreSize)
+                            {
+                                startY = 0;
+                            }
+                            else
+                            {
+                                _currentAcre = neighbour;
+                                _noDirectionChange = true;
+                            }
+                            
+                            done = true;
+                            break;
+                        }
+                    }
+
+                    if (done)
+                    {
+                        break;
+                    }
+                }
+            }
+            else if (neighbour != null &&
+                     neighbour._hasSouthWestCliff)
+            {
+                neighbour = GetNeighbourAcre(-_forward + _right);
+                if (neighbour != null &&
+                    neighbour._hasEastCliff)
+                {
+                    bool done = false;
+                    for (int x = _acreSize - 1; x >= _acreSize - _maxCliffEat; x--)
+                    {
+                        for (int y = _acreSize - 1; y >= _acreSize - _maxCliffEat; y--)
+                        {
+                            var t = neighbour._tiles[x, y];
+                            if (t._isCliff)
+                            {
+                                startX = x + 1;
+                                startY = y;
+                                if (startX >= _acreSize)
+                                {
+                                    startX = 0;
+                                    _currentAcre = GetNeighbourAcre(-_forward);
+                                    _noDirectionChange = true;
+                                }
+                                else
+                                {
+                                    _currentAcre = neighbour;
+                                    _noDirectionChange = true;
+                                    ChangeDirection(Vector2Int.right);
+                                }
+
+                                done = true;
+                                break;
+                            }
+                        }
+
+                        if (done)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            _pos = new Vector2Int(startX, startY);
         }
         else if (startAcre._hasSouthCliff)
         {
-            var startX = 0;
-            var startY = _acreSize - 1 - Random.Range(0, _maxCliffEat);
-            _pos = new Vector2Int(startX, startY);
-            
             _forward = new Vector2Int(1, 0);
             _right = new Vector2Int(0, 1);
             
-            var rng = Random.Range(0, 3);
-            _currentConnectPoint = rng switch
+            var startX = 0;
+            var startY = _acreSize - 1 - Random.Range(0, _maxCliffEat);
+
+            var neighbour = GetNeighbourAcre(-_forward);
+            if (neighbour != null &&
+                neighbour._hasEastCliff)
             {
-                0 => CliffTile.ConnectPoint.NorthWest,
-                1 => CliffTile.ConnectPoint.West,
-                2 => CliffTile.ConnectPoint.SouthWest,
-                _ => throw new ArgumentOutOfRangeException()
-            };
+                bool done = false;
+                for (int x = _acreSize - 1; x >= _acreSize - _maxCliffEat; x--)
+                {
+                    for (int y = _acreSize - 1; y >= _acreSize - _maxCliffEat; y--)
+                    {
+                        var t = neighbour._tiles[x, y];
+                        if (t._isCliff)
+                        {
+                            startX = x + 1;
+                            startY = y;
+                            if (startX >= _acreSize)
+                            {
+                                startX = 0;
+                            }
+                            else
+                            {
+                                _currentAcre = neighbour;
+                                _noDirectionChange = true;
+                            }
+
+                            done = true;
+                            break;
+                        }
+                    }
+
+                    if (done)
+                    {
+                        break;
+                    }
+                }
+            }
+            
+            _pos = new Vector2Int(startX, startY);
         }
         else
         {
@@ -597,13 +813,20 @@ public class CliffWalkAgent
             tile._cliffTile = _cliffTiles[1];
         }
         tile._isCliff = true;
+        tile._elevation = _cliffElevation;
+        tile._cliffDirection = _forward;
 
         bool isDone = false;
         while (!isDone)
         {
+            if (_currentAcre._elevation == _cliffElevation)
+            {
+                _currentAcre._cliffWalked = true;
+            }
+            
             tiles = _currentAcre._tiles;
             tile = tiles[_pos.x, _pos.y];
-            
+
             (var validRules, var numRules, var selectedRule) = SelectRule(tile);
 
             // Loop through all valid tiles until one is found that ends at a valid position
@@ -615,7 +838,10 @@ public class CliffWalkAgent
             {
                 if (tries == numRules)
                 {
-                    throw new Exception("No valid tiles in next position :(");
+                    // throw new Exception("No valid tiles in next position :(");
+                    Debug.Log("At Error: " + _pos + " | " + _forward);
+                    Debug.LogError("No valid tiles in next position :(");
+                    return;
                 }
 
                 rule = validRules[(selectedRule + tries) % numRules];
@@ -628,51 +854,63 @@ public class CliffWalkAgent
 
             // If ok tile found - commit to the move and do step 1 again
             _pos = nextPos;
-
             tile = tiles[_pos.x, _pos.y];
-            tile._cliffTile = _cliffTiles[rule._index];
-            tile._isCliff = true;
-
-            var p = _pos + _right;
-            while (!isOutsideAcre(p))
+            
+            if (tile._elevation >= _cliffElevation && tile._isCliff && !_noDirectionChange)
             {
-                tiles[p.x, p.y]._deelevation++;
-                p += _right;
+                break;
             }
             
-            // Check if should rotate
-            UpdateDirection();
+            tile._cliffTile = _cliffTiles[rule._index];
+            tile._isCliff = true;
+            tile._cliffDirection = _forward;
+            tile._elevation = _cliffElevation;
 
-            isDone = TransitionToNextAcre(acres, w, h);
+            // Check if should rotate
+            if (!_noDirectionChange)
+            {
+                UpdateDirection();
+            }
+
+            isDone = TransitionToNextAcre();
         }
     }
 
-    private bool TransitionToNextAcre(Acre[,] acres, int w, int h)
+    private bool TransitionToNextAcre()
     {
         if (isOutsideAcre(_pos + _forward))
         {
             var nextAcrePos = new Vector2Int(_currentAcre._x, _currentAcre._y) + _forward;
-            if (nextAcrePos.x >= w || nextAcrePos.y >= h || acres[nextAcrePos.x, nextAcrePos.y]._islandIndex != _currentAcre._islandIndex)
+            if (nextAcrePos.x >= _width || nextAcrePos.y >= _height || (_acres[nextAcrePos.x, nextAcrePos.y]._elevation < _currentAcre._elevation && !_noDirectionChange))
             {
                 return true;
             }
             else
             {
+                _noDirectionChange = false;
                 var tile = _currentAcre._tiles[_pos.x, _pos.y];
-                (var validRules, var numRules, var selectedRule) = SelectRule(tile);
+                var (validRules, numRules, selectedRule) = SelectRule(tile);
+                var rule = validRules[selectedRule];
                 
-                _currentAcre = acres[nextAcrePos.x, nextAcrePos.y];
+                _currentAcre = _acres[nextAcrePos.x, nextAcrePos.y];
                 var tiles = _currentAcre._tiles;
-                
-                _pos += _forward;
+
+                var temp = new Vector2Int(_pos.x, _pos.y);
+                _pos += rule._offset;
                 _pos.x = Mod(_pos.x, _acreSize);
                 _pos.y = Mod(_pos.y, _acreSize);
+                Debug.Log("Before: " + temp + " | After: " + _pos + "\n");
                 
                 tile = tiles[_pos.x, _pos.y];
+                if (tile._isCliff)
+                {
+                    return true;
+                }
+                tile._cliffTile = _cliffTiles[rule._index];
                 tile._isCliff = true;
-                tile._cliffTile = _cliffTiles[validRules[selectedRule]._index];
-                    
-                // TODO: Set direction
+                tile._cliffDirection = _forward;
+                tile._elevation = _cliffElevation;
+
                 if (_forward == new Vector2Int(0, 1))
                 {
                     // Keep same direction
@@ -698,7 +936,7 @@ public class CliffWalkAgent
                     }
                 }
                 
-                TransitionToNextAcre(acres, w, h);
+                TransitionToNextAcre();
             }
         }
         
@@ -731,7 +969,7 @@ public class CliffWalkAgent
     {
         if (_forward == new Vector2Int(0, 1) && _currentAcre._hasSouthCliff)
         {
-            if (_pos.y == _acreSize - 2)
+            if (_pos.y == _acreSize - 3)
             {
                 ChangeDirection(Vector2Int.right);
             }
@@ -745,7 +983,7 @@ public class CliffWalkAgent
         } 
         else if (_forward == Vector2Int.right && _currentAcre._hasEastCliff)
         {
-            if (_pos.x == _acreSize - 2)
+            if (_pos.x == _acreSize - 3)
             {
                 ChangeDirection(new Vector2Int(0, -1));
             } 
@@ -765,6 +1003,68 @@ public class CliffWalkAgent
         _right = new Vector2Int(-_forward.y, _forward.x);
     }
 
+    public void WalkToEdge()
+    {
+        var tiles = _currentAcre._tiles;
+        var tile = tiles[_pos.x, _pos.y];
+        
+        // TODO: Think of something robust
+        if (_forward.y > 0)
+        {
+            tile._cliffTile = _cliffTiles[0];
+        } else if (_forward.x > 0)
+        {
+            tile._cliffTile = _cliffTiles[1];
+        }
+        tile._isCliff = true;
+        tile._elevation = _cliffElevation;
+        tile._cliffDirection = _forward;
+
+        bool isDone = isOutsideAcre(_pos + _forward);
+        while (!isDone)
+        {
+            tile = tiles[_pos.x, _pos.y];
+
+            (var validRules, var numRules, var selectedRule) = SelectRule(tile);
+
+            // Loop through all valid tiles until one is found that ends at a valid position
+            CliffTileRule rule;
+            var tries = 0;
+            Vector2Int posForBoundsCheck;
+            Vector2Int nextPos;
+            do
+            {
+                if (tries == numRules)
+                {
+                    throw new Exception("No valid tiles in next position :(");
+                }
+
+                rule = validRules[(selectedRule + tries) % numRules];
+                tries++;
+                
+                // Check if tile will be valid
+                nextPos = _pos + rule._offset;
+                posForBoundsCheck = nextPos + _right * _maxCliffEat;
+            } while (isOutsideAcre(nextPos) || !isOutsideAcre(posForBoundsCheck)) ;
+
+            // If ok tile found - commit to the move and do step 1 again
+            _pos = nextPos;
+            tile = tiles[_pos.x, _pos.y];
+            
+            if (tile._isCliff)
+            {
+                break;
+            }
+            
+            tile._cliffTile = _cliffTiles[rule._index];
+            tile._isCliff = true;
+            tile._cliffDirection = _forward;
+            tile._elevation = _cliffElevation;
+
+            isDone = isOutsideAcre(_pos + _forward);
+        }
+    }
+
     private bool isOutsideAcre(Vector2Int pos)
     {
         return pos.x < 0 ||
@@ -781,5 +1081,18 @@ public class CliffWalkAgent
     private int Mod(int x, int m)
     {
         return (x % m + m) % m;
+    }
+
+    private Acre GetNeighbourAcre(Vector2Int dir)
+    {
+        var p = new Vector2Int(_currentAcre._x, _currentAcre._y);
+        p += dir;
+        if (p.x >= 0 && p.x < _width &&
+            p.y >= 0 && p.y < _height)
+        {
+            return _acres[p.x, p.y];
+        }
+
+        return null;
     }
 }
