@@ -39,7 +39,7 @@ Shader "Unlit/FurShader"
                 float4 HPOS : POSITION;
                 float2 T0 : TEXCOORD0; // fur alpha
                 UNITY_FOG_COORDS(1)
-                float3 normal : TEXCOORD1;
+                float3 normal : NORMAL;
             };
 
             float _FurLength;
@@ -95,7 +95,6 @@ Shader "Unlit/FurShader"
                 // sample the texture
                 // float4 col = tex2D(_MainTex, i.uv);
                 // apply fog
-                
                 // return col;
 
                 float4 FurColour = tex2D(_FurTexture,  IN.T0); // Fur Texture - alpha is VERY IMPORTANT!
@@ -109,8 +108,20 @@ Shader "Unlit/FurShader"
                 FinalColour = ambient + diffuse * dot(_VecLightDir, IN.normal);
                 //End Basic Lighting Code    
                 //-------------------------
-                FinalColour.a = FurColour.a;
-                FinalColour.a *= 1.0 - _Layer * 1;
+                //float f = step(_Layer, 0.0f);
+                
+                if(_Layer > 0.0f)
+                {
+                    FinalColour.a = FurColour.a;    
+                } else
+                {
+                    FinalColour = float4(0.0f, 0.0f, 0.0f, 1.0f);
+                }
+
+                //FinalColour.a = FurColour.a;
+                
+                //FinalColour.a = f + FurColour.a * (1.0f -f);
+                //FinalColour.a *= 1.0 - _Layer * 1;
                 //return FinalColour;      // fur colour only!
                 // UNITY_APPLY_FOG(i.fogCoord, FinalColour);
                 return FinalColour;       // Use texture colour
