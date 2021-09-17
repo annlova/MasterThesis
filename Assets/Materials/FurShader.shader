@@ -3,6 +3,7 @@ Shader "Unlit/FurShader"
     Properties
     {
         _FurTexture ("Texture", 2D) = "white" {}
+        _FurTextureBottom ("TextureBottom", 2D) = "white" {}
         _FurLength ("Fur Length", Float) = 0.0
         _UVScale ("UV Scale", Float) = 1.0
         _Layer ("Layer", Float) = 0.0 // 0 to 1 for the level
@@ -51,6 +52,8 @@ Shader "Unlit/FurShader"
             
             sampler2D _FurTexture;
             float4 _FurTexture_ST;
+            sampler2D _FurTextureBottom;
+            float4 _FurTextureBottom_ST;
             
             vertexOutput vert (vertexInput IN)
             {
@@ -100,6 +103,7 @@ Shader "Unlit/FurShader"
 
                 float4 FurColour = tex2D(_FurTexture,  IN.T0); // Fur Texture - alpha is VERY IMPORTANT!
                 float4 FinalColour = FurColour;
+                
                 //--------------------------
                 //
                 //Basic Directional Lighting
@@ -116,13 +120,19 @@ Shader "Unlit/FurShader"
                     FinalColour.a = FurColour.a;    
                 } else
                 {
-                    FinalColour = float4(0.0f, 0.0f, 0.0f, 1.0f);
+                    float4 BottomColor = tex2D(_FurTextureBottom, IN.T0);
+                    float4 ambient = {0.3, 0.3, 0.3, 0.0};
+                    ambient = ambient * BottomColor;
+                    float4 diffuse = BottomColor;
+                    BottomColor = ambient + diffuse * dot(_VecLightDir, IN.normal);
+                    FinalColour = float4(BottomColor.xyz, 1.0f);
+                    //FinalColour = float4(0.0f, 0.0f, 0.0f, 1.0f);
                 }
 
                 //FinalColour.a = FurColour.a;
                 
                 //FinalColour.a = f + FurColour.a * (1.0f -f);
-                //FinalColour.a *= 1.0 - _Layer * 1;
+                //FinalColour.a *= 1.0 - _Layer * 2;
                 //return FinalColour;      // fur colour only!
                 // UNITY_APPLY_FOG(i.fogCoord, FinalColour);
                 return FinalColour;       // Use texture colour
