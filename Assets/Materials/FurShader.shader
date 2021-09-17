@@ -11,6 +11,7 @@ Shader "Unlit/FurShader"
     }
     SubShader
     {
+//        Tags {"RenderType"="Opaque"}
         Tags { "Queue"="Transparent" "RenderType"="Transparent" }
         Blend SrcAlpha OneMinusSrcAlpha
         ZWrite off
