@@ -65,13 +65,16 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - _BumpScale: 1
+    - _ColorVariation: 0.5
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
+    - _Falloff: 0
     - _FurLength: 0
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
+    - _HairAmount: 500
     - _Layer: 0
     - _Metallic: 0
     - _Mode: 0
@@ -80,7 +83,8 @@ Material:
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
-    - _UVScale: 2
+    - _Thickness: 0.5
+    - _UVScale: 1
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:

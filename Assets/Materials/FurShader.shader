@@ -9,6 +9,10 @@ Shader "Unlit/FurShader"
         _Layer ("Layer", Float) = 0.0 // 0 to 1 for the level
         _VGravity ("Gravity float3", Vector) = (0,-2.0,0,0)
         _VecLightDir ("Light Dir", Vector) = (0.8,0.8,1,0)
+        _Thickness("Hair Thickness", Float) = 0.5
+        _Falloff("Hair Length Falloff factor", Float) = 10.0
+        _HairAmount("Number of Hair Strands", Float) = 1000.0
+        _ColorVariation("Color Variation", Float) = 0.6
     }
     SubShader
     {
@@ -54,6 +58,11 @@ Shader "Unlit/FurShader"
             float4 _FurTexture_ST;
             sampler2D _FurTextureBottom;
             float4 _FurTextureBottom_ST;
+
+            float _Thickness;
+            float _Falloff;
+            float _HairAmount;
+            float _ColorVariation;
             
             vertexOutput vert (vertexInput IN)
             {
@@ -94,6 +103,10 @@ Shader "Unlit/FurShader"
                 return OUT;
             }
 
+            float random (float2 st) {
+                return frac(sin(dot(st.xy, float2(12.9898,78.233))) * 43758.5453123);
+            }
+            
             float4 frag (vertexOutput IN) : COLOR
             {
                 // sample the texture
@@ -101,35 +114,35 @@ Shader "Unlit/FurShader"
                 // apply fog
                 // return col;
 
+                float hairLimit = _Thickness + _Layer * _Falloff;
+                float2 st = IN.T0;
+                st *= _HairAmount;
+                float2 ipos = floor(st);  // get the integer coords
+                float2 fpos = frac(st);  // get the fractional coords
+                float hair = random(ipos);
+                float isHair = step(hairLimit, hair);
+                
                 float4 FurColour = tex2D(_FurTexture,  IN.T0); // Fur Texture - alpha is VERY IMPORTANT!
                 float4 FinalColour = FurColour;
                 
                 //--------------------------
                 //
                 //Basic Directional Lighting
-                float4 ambient = {0.3, 0.3, 0.3, 0.0};
-                ambient = ambient * FinalColour;
-                float4 diffuse = FinalColour;
-                FinalColour = ambient + diffuse * dot(_VecLightDir, IN.normal);
+                //float4(0.66f, 0.33f, 0.21f, 0.0f)
+                float4 zeroVec = float4(0.0f, 0.0f, 0.0f, 0.0f);
+                float4 oneVec = float4(1.0f, 1.0f, 1.0f, 0.0f);
+                float4 color = tex2D(_FurTexture, IN.T0) * clamp(random(ipos + 5.0f), _ColorVariation, 1.0f);
+                float4 ambient = {0.5f, 0.5f, 0.5f, 0.0f};
+                float4 diffuse = float4(1.0f, 1.0f, 1.0f, 0.0f) * dot(_VecLightDir, IN.normal);
+                diffuse = clamp(diffuse, zeroVec, oneVec);
+                FinalColour = ambient * color + diffuse * color;
+                FinalColour = clamp(FinalColour, zeroVec, oneVec);
+
+                float isBottomLayer = step(_Layer, 0.0f);
+                
+                FinalColour.a = clamp(isHair + isBottomLayer, 0.0f, 1.0f);
                 //End Basic Lighting Code    
                 //-------------------------
-                //float f = step(_Layer, 0.0f);
-                
-                if(_Layer > 0.0f)
-                {
-                    FinalColour.a = FurColour.a;    
-                } else
-                {
-                    float4 BottomColor = tex2D(_FurTextureBottom, IN.T0);
-                    float4 ambient = {0.3, 0.3, 0.3, 0.0};
-                    ambient = ambient * BottomColor;
-                    float4 diffuse = BottomColor;
-                    BottomColor = ambient + diffuse * dot(_VecLightDir, IN.normal);
-                    FinalColour = float4(BottomColor.xyz, 1.0f);
-                    //FinalColour = float4(0.0f, 0.0f, 0.0f, 1.0f);
-                }
-
-                //FinalColour.a = FurColour.a;
                 
                 //FinalColour.a = f + FurColour.a * (1.0f -f);
                 //FinalColour.a *= 1.0 - _Layer * 2;
@@ -138,6 +151,7 @@ Shader "Unlit/FurShader"
                 return FinalColour;       // Use texture colour
                 // return float4(0,0,0,0); // Use for totally invisible!  Can't see
             }
+
             ENDHLSL
         }
     }
