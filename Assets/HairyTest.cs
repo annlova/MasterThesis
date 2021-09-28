@@ -65,7 +65,7 @@ public class HairyTest : MonoBehaviour
 
             mat.SetFloat("_FurLength", _shellDistance * i);
             mat.SetFloat("_Layer", _gravityWeight * i);
-            //mat.SetVector("_VGravity", _gravityDir);
+            mat.SetVector("_VGravity", _gravityDir);
 
             mat.renderQueue = 3000 + i;
         }

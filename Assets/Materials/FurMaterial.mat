@@ -71,10 +71,11 @@ Material:
     - _DstBlend: 0
     - _Falloff: 0
     - _FurLength: 0
+    - _Glitter: 1
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _HairAmount: 599.7
+    - _HairAmount: 1000
     - _Layer: 0
     - _Metallic: 0
     - _Mode: 0
@@ -83,7 +84,7 @@ Material:
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
-    - _Thickness: 0.5
+    - _Thickness: 0
     - _UVScale: 1
     - _UVSec: 0
     - _ZWrite: 1

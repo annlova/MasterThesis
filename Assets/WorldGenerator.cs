@@ -813,6 +813,20 @@ public class CliffTileRule
     public Vector2Int _direction;
 }
 
+public class WalkState
+{
+    public int _tries;
+    public int _selectedRule;
+    public Vector2Int _pos;
+
+    public WalkState(int tries, int selectedRule, Vector2Int pos)
+    {
+        _tries = tries;
+        _selectedRule = selectedRule;
+        _pos = pos;
+    }
+}
+
 public class CliffWalkAgent
 {
     private Acre[,] _acres;
@@ -833,6 +847,8 @@ public class CliffWalkAgent
     private int _maxCliffEat;
 
     private bool _noDirectionChange;
+
+    private Stack<WalkState> _history;
     
     public CliffWalkAgent(Acre[,] acres, int width, int height, CliffTile[] cliffTiles, Acre startAcre, int maxCliffEat)
     {
@@ -846,25 +862,10 @@ public class CliffWalkAgent
         _acreSize = startAcre._size;
         _maxCliffEat = maxCliffEat;
         _noDirectionChange = false;
+        _history = new Stack<WalkState>();
         CalculateCliffWalkStart(_currentAcre);
     }
 
-    public CliffWalkAgent(Acre[,] acres, int width, int height, CliffTile[] cliffTiles, Acre startAcre, int maxCliffEat, int cliffElevation,
-        Vector2Int forward, Vector2Int pos)
-    {
-        _acres = acres;
-        _width = width;
-        _height = height; 
-        _cliffTiles = cliffTiles;
-        _currentAcre = startAcre;
-        _cliffElevation = cliffElevation;
-        _acreSize = startAcre._size;
-        _maxCliffEat = maxCliffEat;
-        _noDirectionChange = false;
-        ChangeDirection(forward);
-        _pos = pos;
-    }
-    
     private void CalculateCliffWalkStart(Acre startAcre)
     {
         if (startAcre._hasWestCliff)
@@ -1016,10 +1017,10 @@ public class CliffWalkAgent
         // TODO: Think of something robust
         if (_forward.y > 0)
         {
-            tile._cliffTile = _cliffTiles[0];
+            tile._cliffTile = _cliffTiles[25];
         } else if (_forward.x > 0)
         {
-            tile._cliffTile = _cliffTiles[1];
+            tile._cliffTile = _cliffTiles[9];
         }
         tile._isCliff = true;
         tile._elevation = _cliffElevation;
@@ -1049,10 +1050,22 @@ public class CliffWalkAgent
             {
                 if (tries == numRules)
                 {
-                    // throw new Exception("No valid tiles in next position :(");
-                    Debug.Log("At Error: " + _pos + " | " + _forward);
-                    Debug.LogError("No valid tiles in next position :(");
-                    return;
+                    if (_history.Count == 0)
+                    {
+                        // throw new Exception("No valid tiles in next position :(");
+                        Debug.Log("At Error: " + _pos + " | " + _forward);
+                        Debug.LogError("No valid tiles in next position :(");
+                        return;
+                    }
+
+                    var state = _history.Pop();
+                    tile = tiles[_pos.x, _pos.y];
+                    tile._isCliff = false;
+                    _pos = state._pos;
+                    tile = tiles[_pos.x, _pos.y];
+                    (validRules, numRules, _) = SelectRule(tile);
+                    selectedRule = state._selectedRule;
+                    tries = state._tries;
                 }
 
                 rule = validRules[(selectedRule + tries) % numRules];
@@ -1063,6 +1076,8 @@ public class CliffWalkAgent
                 posForBoundsCheck = nextPos + _right * _maxCliffEat;
             } while (isOutsideAcre(nextPos) || !isOutsideAcre(posForBoundsCheck)) ;
 
+            _history.Push(new WalkState(tries, selectedRule, _pos));
+            
             // If ok tile found - commit to the move and do step 1 again
             var oldPos = _pos;
             _pos = nextPos;
@@ -1135,7 +1150,8 @@ public class CliffWalkAgent
                 tries++;
                 if (tries > numRules)
                 {
-                    throw new Exception("Unable to find tile for acre transition! :(");
+                    Debug.Log("Unable to find tile for acre transition! :(");
+                    return true;
                 }
 
                 nextPos = _pos + rule._offset;
