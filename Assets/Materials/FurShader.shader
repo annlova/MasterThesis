@@ -106,6 +106,7 @@ Shader "Unlit/FurShader"
             float random (float2 st) {
                 return frac(sin(dot(st.xy, float2(12.9898,78.233))) * 43758.5453123);
             }
+
             
             float4 frag (vertexOutput IN) : COLOR
             {

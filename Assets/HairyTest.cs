@@ -20,6 +20,22 @@ public class HairyTest : MonoBehaviour
     [SerializeField]
     private Vector3 _gravityDir;
 
+    [SerializeField]
+    private float _thickness;
+    private float _prevThickness;
+    
+    [SerializeField]
+    private float _falloff;
+    private float _prevFalloff;
+
+    [SerializeField]
+    private float _hairAmount;
+    private float _prevHairAmount;
+
+    [SerializeField]
+    private float _colorVariation;
+    private float _prevColorVariation;
+    
     // Start is called before the first frame update
     /*
     void Start()
@@ -58,6 +74,33 @@ public class HairyTest : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+        if (_prevThickness != _thickness ||
+            _prevFalloff != _falloff ||
+            _prevHairAmount != _hairAmount ||
+            _prevColorVariation != _colorVariation)
+        {
+            var renderers = GetComponentsInChildren<Renderer>();
+            foreach (var r in renderers)
+            {
+                if (_prevThickness != _thickness)
+                {
+                    r.sharedMaterial.SetFloat("_Thickness", _thickness);
+                }
+                if (_prevFalloff != _falloff) {
+                    r.sharedMaterial.SetFloat("_Falloff", _falloff);
+                }
+                if (_prevHairAmount != _hairAmount) {
+                    r.sharedMaterial.SetFloat("_HairAmount", _hairAmount);
+                }
+                if (_prevColorVariation != _colorVariation) {
+                    r.sharedMaterial.SetFloat("_ColorVariation", _colorVariation);
+                }
+            }   
+        }
+
+        _prevThickness = _thickness;
+        _prevFalloff = _falloff;
+        _prevHairAmount = _hairAmount;
+        _prevColorVariation = _colorVariation;
     }
 }
