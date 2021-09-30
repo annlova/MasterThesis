@@ -55,6 +55,8 @@ public class HairyTest : MonoBehaviour
         }
     }
     */
+
+    private GameObject _pedro;
     
     void Start()
     {
@@ -64,38 +66,36 @@ public class HairyTest : MonoBehaviour
             var mat = o.GetComponent<Renderer>().material;
 
             mat.SetFloat("_FurLength", _shellDistance * i);
-            mat.SetFloat("_Layer", _gravityWeight * i);
+            mat.SetFloat("_Layer", i);
+            mat.SetFloat("_MaxLayer", (_numberOfLayers - 1));
             mat.SetVector("_VGravity", _gravityDir);
 
             mat.renderQueue = 3000 + i;
         }
+        
+        _pedro = GameObject.Find("PedroTheBear");
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (_prevThickness != _thickness ||
-            _prevFalloff != _falloff ||
-            _prevHairAmount != _hairAmount ||
-            _prevColorVariation != _colorVariation)
+        var renderers = GetComponentsInChildren<Renderer>();
+        foreach (var r in renderers)
         {
-            var renderers = GetComponentsInChildren<Renderer>();
-            foreach (var r in renderers)
+            r.sharedMaterial.SetVector("_PedroWorldPos", _pedro.transform.position);
+            if (_prevThickness != _thickness)
             {
-                if (_prevThickness != _thickness)
-                {
-                    r.sharedMaterial.SetFloat("_Thickness", _thickness);
-                }
-                if (_prevFalloff != _falloff) {
-                    r.sharedMaterial.SetFloat("_Falloff", _falloff);
-                }
-                if (_prevHairAmount != _hairAmount) {
-                    r.sharedMaterial.SetFloat("_HairAmount", _hairAmount);
-                }
-                if (_prevColorVariation != _colorVariation) {
-                    r.sharedMaterial.SetFloat("_ColorVariation", _colorVariation);
-                }
-            }   
+                r.sharedMaterial.SetFloat("_Thickness", _thickness);
+            }
+            if (_prevFalloff != _falloff) {
+                r.sharedMaterial.SetFloat("_Falloff", _falloff);
+            }
+            if (_prevHairAmount != _hairAmount) {
+                r.sharedMaterial.SetFloat("_HairAmount", _hairAmount);
+            }
+            if (_prevColorVariation != _colorVariation) {
+                r.sharedMaterial.SetFloat("_ColorVariation", _colorVariation);
+            }
         }
 
         _prevThickness = _thickness;

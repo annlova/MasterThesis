@@ -7,19 +7,21 @@ Shader "Unlit/FurShader"
         _FurLength ("Fur Length", Float) = 0.0
         _UVScale ("UV Scale", Float) = 1.0
         _Layer ("Layer", Float) = 0.0 // 0 to 1 for the level
+        _MaxLayer("Max Layer", Float) = 1.0
         _VGravity ("Gravity float3", Vector) = (0,-2.0,0,0)
         _Thickness("Hair Thickness", Float) = 0.5
         _Falloff("Hair Length Falloff factor", Float) = 10.0
         _HairAmount("Number of Hair Strands", Float) = 1000.0
         _ColorVariation("Color Variation", Float) = 0.6
         _Glitter("Glitter", Float) = 50.0
+        _PedroWorldPos("Pedro World Pos", Vector) = (0.0, 0.0, 0.0)
     }
     SubShader
     {
 //        Tags {"RenderType"="Opaque"}
         Tags { "Queue"="Transparent" "RenderType"="Transparent" }
         Blend SrcAlpha OneMinusSrcAlpha
-        ZWrite off
+        ZWrite on
         LOD 100
 
         Pass
@@ -47,11 +49,13 @@ Shader "Unlit/FurShader"
                 float2 T0 : TEXCOORD0; // fur alpha
                 UNITY_FOG_COORDS(1)
                 float3 normal : NORMAL;
+                float3 sectionNormal : NORMAL2;
             };
 
             float _FurLength;
             float _UVScale;
             float _Layer;
+            float _MaxLayer;
             float3 _VGravity;
             
             sampler2D _FurTexture;
@@ -66,6 +70,17 @@ Shader "Unlit/FurShader"
             float _ColorVariation;
 
             float _Glitter;
+
+            float3 _PedroWorldPos;
+            
+            float random2 (float2 st);
+            float random(float2 st);
+            float noise (in float2 st);
+            float fbm (in float2 st);
+            float3 mod289(float3 x);
+            float2 mod289(float2 x);
+            float3 permute(float3 x);
+            float snoise(float2 v);
             
             vertexOutput vert (vertexInput IN)
             {
@@ -78,6 +93,7 @@ Shader "Unlit/FurShader"
                 //This single line is responsible for creating the layers!  This is it! Nothing
                 //more nothing less!
                 float3 P = IN.position.xyz + (IN.normal * _FurLength);
+                float3 sectionVector = IN.normal * _FurLength;
 
                 //Modify our normal so it faces the correct direction for lighting if we
                 //want any lighting
@@ -85,12 +101,19 @@ Shader "Unlit/FurShader"
 
                 // Couple of lines to give a swaying effect!
                 // Additional Gravit/Force Code
-                _VGravity = mul(_VGravity, UNITY_MATRIX_M);
-                float k =  pow(_Layer, 3);  // We use the pow function, so that only the tips of the hairs bend
-                                           // As layer goes from 0 to 1, so by using pow(..) function is still
-                                           // goes form 0 to 1, but it increases faster! exponentially
-
-                P = P + _VGravity*k;
+                // _VGravity = mul(_VGravity, UNITY_MATRIX_M);
+                // _VGravity = normalize(_VGravity);
+                // float layerFactor = (_Layer / _MaxLayer);
+                // float k =  pow(layerFactor, 3);  // We use the pow function, so that only the tips of the hairs bend
+                //                            // As layer goes from 0 to 1, so by using pow(..) function is still
+                //                            // goes form 0 to 1, but it increases faster! exponentially
+                //
+                // float windFactor = ((snoise((P.xz * 0.1f) + _Time.y) + 1.0f) / 2.0f) * 0.02f;
+                // P = P + _VGravity * k * windFactor;
+                // sectionVector += _VGravity * k * windFactor;
+                float3 sectionNormal = reflect(-sectionVector, normal);
+                sectionNormal = normalize(UnityObjectToWorldNormal(sectionNormal));
+                OUT.sectionNormal = sectionNormal;
                 // End Gravity Force Addit Code
 
                 OUT.T0 = IN.texCoordDiffuse * _UVScale; // Pass long texture data
@@ -106,8 +129,102 @@ Shader "Unlit/FurShader"
                 
                 return OUT;
             }
+            
+            float4 frag (vertexOutput IN) : COLOR
+            {
+                // sample the texture
+                // float4 col = tex2D(_MainTex, i.uv);
+                // apply fog
+                // return col;
 
-            float random2 (float2 st) {
+                float hairLimit = _Thickness + _Layer * _Falloff;
+                float2 st = IN.T0;
+                float2 oldST = st;
+
+                
+                st *= _HairAmount;
+                _VGravity = normalize(_VGravity);
+                float layerFactor = (_Layer / _MaxLayer);
+                float k =  pow(layerFactor, 3);
+                float windFactor = ((snoise((IN.WORLD_POS.xz * 0.1f) + _Time.y) + 1.0f) / 2.0f) * 0.1f;
+                float pedroDistance = distance(_PedroWorldPos, IN.WORLD_POS.xyz);
+                float3 pedroDir = normalize(_PedroWorldPos - IN.WORLD_POS.xyz);
+                st += -pedroDir.xz * k * _Falloff * (1.0f - smoothstep(0.0f, 1.0f, pedroDistance));
+                st += windFactor * k * 50.0f;
+                // float2 oldST = st / _HairAmount;
+
+                float2 stSame = st + float2(1.0f, 1.0f) * (_Time.y * 0.1f);
+                float2 stUp = stSame + float2(0.0f, 1.0f) * _FurTexture_TexelSize.y;
+                float2 stRight = stSame + float2(1.0f, 0.0f) * _FurTexture_TexelSize.x;                
+                float2 stShadowHair = st + _WorldSpaceLightPos0.xz * _FurTexture_TexelSize.xy;
+                // st *= _HairAmount;
+                stSame *= _Glitter;
+                stUp *= _Glitter;
+                stRight *= _Glitter;
+                stShadowHair *= _HairAmount;
+                
+                // float2 ipos = floor(st);  // get the integer coords
+                // float2 fpos = frac(st);  // get the fractional coords
+                float hair = noise(st);
+                float pA = (snoise(stSame) + 1.0f) / 2.0f * 1.0f;
+                float pB = (snoise(stUp) + 1.0f) / 2.0f * 1.0f;
+                float pC = (snoise(stRight) + 1.0f) / 2.0f * 1.0f;
+                float3 vA = float3(stUp.x, pB, stUp.y) - float3(stSame.x, pA, stSame.y);
+                float3 vB = float3(stRight.x, pC, stRight.y) - float3(stSame.x, pA, stSame.y);
+                float3 snoiseNormal = normalize(cross(vA, vB));
+                
+                float shadowHair = noise(stShadowHair);
+                shadowHair = max((shadowHair - 0.3f), 0.0f);
+                // shadowHair *= 0.1f;
+                // float isHair = step(hairLimit, hair);
+                
+                //--------------------------
+                //
+                //Basic Directional Lighting
+                //float4(0.66f, 0.33f, 0.21f, 0.0f)
+                float4 zeroVec = float4(0.0f, 0.0f, 0.0f, 0.0f);
+                float4 oneVec = float4(1.0f, 1.0f, 1.0f, 0.0f);
+                float variation = 0.1f * _ColorVariation;
+                float4 color = tex2D(_FurTexture, oldST);//* lerp(1.0 - variation, 1.0f, hair);// * clamp(random(ipos + 5.0f), _ColorVariation, 1.0f);
+                color.r += lerp(-variation, variation, hair);
+                color.g += lerp(-variation, variation, hair);
+                color.b += lerp(-variation, variation, hair);
+                color = clamp(color, zeroVec, oneVec);
+                float4 ambient = {0.5f, 0.5f, 0.5f, 0.0f};
+                float4 diffuse = float4(1.0f, 1.0f, 1.0f, 0.0f) * k * dot(_WorldSpaceLightPos0, IN.normal);
+                diffuse = clamp(diffuse, zeroVec, oneVec);
+
+                float specularStrength = 0.0f;
+                float3 viewDir = normalize(IN.WORLD_POS - _WorldSpaceCameraPos);
+                float3 reflectDir = reflect(_WorldSpaceLightPos0, IN.sectionNormal);
+                float spec = pow(max(dot(viewDir, reflectDir), 0.0f), 32);
+                float4 specular = specularStrength * spec * oneVec;
+                
+                float4 FinalColour = (ambient + diffuse + specular) * color;
+                // FinalColour.g = step(shadowHair, 0.5f) * 0.5f;
+                // FinalColour -= float4(shadowHair, shadowHair, shadowHair, 0.0f);
+                FinalColour = clamp(FinalColour, zeroVec, oneVec);
+
+                // FinalColour = float4(shadowHair, shadowHair, shadowHair, 0.0f);
+                // FinalColour = float4(IN.sectionNormal, 1.0f);
+                
+                float isBottomLayer = step(_Layer, 0.0f);
+                float4 bottomColor = tex2D(_FurTextureBottom, IN.T0);
+                FinalColour = isBottomLayer * bottomColor + (1.0f - isBottomLayer) * FinalColour;
+                float layer = _Layer * (0.03f / 1.0f);
+                FinalColour.a = clamp(max((hair * smoothstep(0.0f, 1.0f, pedroDistance)), 0.0f) + isBottomLayer, 0.0f, 1.0f);
+                //End Basic Lighting Code    
+                //-------------------------
+                
+                //FinalColour.a = f + FurColour.a * (1.0f -f);
+                // FinalColour.a *= 1.0 - _Layer * 20;
+                //return FinalColour;      // fur colour only!
+                // UNITY_APPLY_FOG(i.fogCoord, FinalColour);
+                return FinalColour;       // Use texture colour
+                // return float4(0,0,0,0); // Use for totally invisible!  Can't see
+            }
+
+                        float random2 (float2 st) {
                 return frac(sin(dot(st.xy, float2(12.9898,78.233))) * 43758.5453123);
             }
 
@@ -228,85 +345,6 @@ Shader "Unlit/FurShader"
                 g.x  = a0.x  * x0.x  + h.x  * x0.y;
                 g.yz = a0.yz * float2(x1.x,x2.x) + h.yz * float2(x1.y,x2.y);
                 return 130.0 * dot(m, g);
-            }
-            
-            float4 frag (vertexOutput IN) : COLOR
-            {
-                // sample the texture
-                // float4 col = tex2D(_MainTex, i.uv);
-                // apply fog
-                // return col;
-
-                float hairLimit = _Thickness + _Layer * _Falloff;
-                float2 st = IN.T0;
-                float2 stSame = IN.T0 + float2(1.0f, 1.0f) * (_Time.y * 0.1f);
-                float2 stUp = stSame + float2(0.0f, 1.0f) * _FurTexture_TexelSize.y;
-                float2 stRight = stSame + float2(1.0f, 0.0f) * _FurTexture_TexelSize.x;                
-                float2 stShadowHair = st + _WorldSpaceLightPos0.xz * _FurTexture_TexelSize.xy;
-                st *= _HairAmount;
-                stSame *= _Glitter;
-                stUp *= _Glitter;
-                stRight *= _Glitter;
-                stShadowHair *= _HairAmount;
-                // float2 ipos = floor(st);  // get the integer coords
-                // float2 fpos = frac(st);  // get the fractional coords
-                float hair = noise(st);
-                float pA = (snoise(stSame) + 1.0f) / 2.0f * 1.0f;
-                float pB = (snoise(stUp) + 1.0f) / 2.0f * 1.0f;
-                float pC = (snoise(stRight) + 1.0f) / 2.0f * 1.0f;
-                float3 vA = float3(stUp.x, pB, stUp.y) - float3(stSame.x, pA, stSame.y);
-                float3 vB = float3(stRight.x, pC, stRight.y) - float3(stSame.x, pA, stSame.y);
-                float3 snoiseNormal = normalize(cross(vA, vB));
-                
-                float shadowHair = noise(stShadowHair);
-                shadowHair = max((shadowHair - 0.3f), 0.0f);
-                // shadowHair *= 0.1f;
-                // float isHair = step(hairLimit, hair);
-                
-                //--------------------------
-                //
-                //Basic Directional Lighting
-                //float4(0.66f, 0.33f, 0.21f, 0.0f)
-                float4 zeroVec = float4(0.0f, 0.0f, 0.0f, 0.0f);
-                float4 oneVec = float4(1.0f, 1.0f, 1.0f, 0.0f);
-                float variation = 0.1f * _ColorVariation;
-                float4 color = tex2D(_FurTexture, IN.T0);//* lerp(1.0 - variation, 1.0f, hair);// * clamp(random(ipos + 5.0f), _ColorVariation, 1.0f);
-                color.r += lerp(-variation, variation, hair);
-                color.g += lerp(-variation, variation, hair);
-                color.b += lerp(-variation, variation, hair);
-                color = clamp(color, zeroVec, oneVec);
-                float4 ambient = {0.5f, 0.5f, 0.5f, 0.0f};
-                float4 diffuse = float4(1.0f, 1.0f, 1.0f, 0.0f) * dot(_WorldSpaceLightPos0, IN.normal);
-                diffuse = clamp(diffuse, zeroVec, oneVec);
-
-                float specularStrength = 2.f;
-                float3 viewDir = normalize(IN.WORLD_POS - _WorldSpaceCameraPos);
-                float3 reflectDir = reflect(-_WorldSpaceLightPos0, snoiseNormal);
-                float spec = pow(max(dot(viewDir, reflectDir), 0.0f), 16);
-                float4 specular = specularStrength * spec * oneVec;
-                
-                float4 FinalColour = (ambient + diffuse + specular) * color;
-                // FinalColour.g = step(shadowHair, 0.5f) * 0.5f;
-                // FinalColour -= float4(shadowHair, shadowHair, shadowHair, 0.0f);
-                FinalColour = clamp(FinalColour, zeroVec, oneVec);
-
-                // FinalColour = float4(shadowHair, shadowHair, shadowHair, 0.0f);
-                // FinalColour = float4(specular.xyz, 1.0f);
-                
-                float isBottomLayer = step(_Layer, 0.0f);
-                float4 bottomColor = tex2D(_FurTextureBottom, IN.T0);
-                FinalColour = isBottomLayer * bottomColor + (1.0f - isBottomLayer) * FinalColour;
-                float layer = _Layer * (0.03f / 1.0f);
-                FinalColour.a = clamp(max((hair), 0.0f) + isBottomLayer, 0.0f, 1.0f);
-                //End Basic Lighting Code    
-                //-------------------------
-                
-                //FinalColour.a = f + FurColour.a * (1.0f -f);
-                // FinalColour.a *= 1.0 - _Layer * 20;
-                //return FinalColour;      // fur colour only!
-                // UNITY_APPLY_FOG(i.fogCoord, FinalColour);
-                return FinalColour;       // Use texture colour
-                // return float4(0,0,0,0); // Use for totally invisible!  Can't see
             }
 
             ENDHLSL
