@@ -15,7 +15,8 @@ Shader "Unlit/FurShader"
         _WindSize ("Wind gust area size", Float) = 0.0
         
         _BottomTexture ("Texture of bottom layer", 2D) = "white" {}
-        _FurTexture ("Texture of fur layers", 2D) = "white" {}
+        _FurTexture ("Texture of all fur layers, except for outmost", 2D) = "white" {}
+        _OutmostLayerTexture ("Texture of outmost fur layer", 2D) = "white" {}
         _MaskTexture ("Texture of masking area", 2D) = "white" {}
         
         _LightColor ("Color of light", Vector) = (1.0, 1.0, 1.0, 1.0)
@@ -34,7 +35,7 @@ Shader "Unlit/FurShader"
             #include "UnityShaderVariables.cginc"
             #include "UnityCG.cginc"
 
-            float3 getColor(float2 st, float3 bottom, float3 fur);
+            float3 getColor(float2 st, float3 bottom, float3 fur, float3 outmostFur);
             float3 ambient();
             float3 diffuse(float3 normal, float3 lightDir, float3 mask);
             float2 textureToFurCoords(float2 worldPlanePos, float windFactor);
@@ -81,6 +82,7 @@ Shader "Unlit/FurShader"
 
             sampler2D _BottomTexture;
             sampler2D _FurTexture;
+            sampler2D _OutmostLayerTexture;
             sampler2D _MaskTexture;
 
             float4 _LightColor;
@@ -108,6 +110,7 @@ Shader "Unlit/FurShader"
             {
                 float3 bottom = tex2D(_BottomTexture, input.st);
                 float3 fur = tex2D(_FurTexture, input.st);
+                float3 outmostFur = tex2D(_OutmostLayerTexture, input.st);
                 float3 mask = tex2D(_MaskTexture, input.st);
 
                 float4 zeroVec = float4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -119,7 +122,9 @@ Shader "Unlit/FurShader"
                 
                 float alpha = genAlpha(furPlanePos, mask);
 
-                float3 color = (ambient() + diffuse(input.worldNor, normalize(_WorldSpaceCameraPos - input.worldPos), mask)) * getColor(input.st, bottom, fur);
+                float3 color = (ambient() + diffuse(input.worldNor,
+                    normalize(_WorldSpaceCameraPos - input.worldPos),
+                    mask)) * getColor(input.st, bottom, fur, outmostFur);
                 // color *= 0.5f + layerFactor() * 0.5f;
                 
                 //color += windFactor;
@@ -130,10 +135,13 @@ Shader "Unlit/FurShader"
                 return float4(color, alpha);
             }
             
-            float3 getColor(float2 st, float3 bottom, float3 fur)
+            float3 getColor(float2 st, float3 bottom, float3 fur, float3 outmostFur)
             {
-                float isBottom = step(_Layer, 0.0f);
-                return (bottom * isBottom) + fur * (1.0f - isBottom);
+                float isBottom = step(_Layer, 0);
+                float isFur = step(_Layer, _MaxLayer - 1) * step(1, _Layer);
+                float isOutermostLayer = step(_MaxLayer, _Layer);
+                
+                return (bottom * isBottom) + (fur * isFur) + (outmostFur * isOutermostLayer);
             }
             
             float2 textureToFurCoords(float2 worldPlanePos, float windFactor)
@@ -162,7 +170,8 @@ Shader "Unlit/FurShader"
             float genAlpha(float2 stFur, float3 mask)
             {
                 float isBottom = step(_Layer, 0.0f);
-                return min((noise(stFur)/3 + 0.1) * mask.g + (1 - mask.r)  + isBottom, 1.0f);
+                float isOutermostLayer = step(_MaxLayer, _Layer);
+                return min((noise(stFur)/3 + 0.1) * mask.g + (1 - mask.r) + isBottom + isOutermostLayer * mask.b, 1.0f);
             }
 
             float layerFactor()
@@ -182,11 +191,6 @@ Shader "Unlit/FurShader"
                 float b2 = step(_FurDensity + 1.0f, r);
                 return 1.0f * b1 + (0.0f * b2 + r * (1.0f - b2)) * (1.0f - b1);
             }
-
-            // float random (float2 st) {
-            //     float rng = frac(sin(dot(st.xy, float2(12.9898,78.233))) * 4375834.5453123);
-            //     return rng * step(rng, _FurDensity);
-            // }
             
             float noise (in float2 st) {
                 float2 i = floor(st);

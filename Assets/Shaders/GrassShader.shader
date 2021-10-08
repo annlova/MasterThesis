@@ -42,6 +42,7 @@ Shader "Unlit/GrassShader"
             float genAlpha(float2 st);
             float layerFactor();
             
+            float4 hash42(float2 x);
             float random2 (float2 st);
             float random(float2 st);
             float noise (in float2 st);
@@ -121,9 +122,12 @@ Shader "Unlit/GrassShader"
          
                 color = clamp(color, zeroVec, oneVec);
 
-                // float2 f = input.st * _GrassMultiplier * 2;
+                float2 f = input.st * _GrassMultiplier * 5;
                 // return float4(random(f),random(f),random(f),1.0f);
                 // return float4(input.st,0.0f,1.0f);
+
+                // float rng = hash42(floor(f)).x;
+                // return float4(rng, rng, rng, 1.0f);
                 
                 return float4(color, alpha);
             }
@@ -175,14 +179,23 @@ Shader "Unlit/GrassShader"
                 return pow(t, 3);
             }
 
-            const float PHI = 1.61803398874989484820459; // Φ = Golden Ratio 
-            float gold_noise(in float2 xy)
+            uint baseHash(uint2 p)
             {
-                return frac(tan(distance(xy * PHI, xy) * 456.879) * xy.x);
+                p = 1103515245U * ((p >> 1U)^(p.yx));
+                uint h32 = 1103515245U * ((p.x)^(p.y>>3U));
+                return h32^(h32 >> 16);
+            }
+
+            float4 hash42(float2 x)
+            {
+                uint n = baseHash(asuint(x));
+                uint4 rz = uint4(n, n * 16807U, n * 48271U, n * 69621U);
+                return float4((rz >> 1) & uint4((0x7fffffffU).xxxx))/float(0x7fffffff);
             }
 
             float random2(float2 st) {
-                return frac(sin(dot(st.xy, float2(12.9898,78.233))) * 43758.5453123);
+                // return frac(sin(dot(st.xy, float2(12.9898,78.233))) * 43758.5453123);
+                return hash42(st).x;
             }
 
             float random(float2 st)

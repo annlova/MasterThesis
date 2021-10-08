@@ -20,7 +20,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BottomTexture:
-        m_Texture: {fileID: 2800000, guid: a08e9d938a68c5047b6ea2d6a83dfc64, type: 3}
+        m_Texture: {fileID: 2800000, guid: 0be432356416f2041bd91e1947ca35a8, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
@@ -61,6 +61,10 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
         m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OutmostLayerTexture:
+        m_Texture: {fileID: 2800000, guid: afd7a29e6dfe33848998e3eabbc90ab3, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ParallaxMap:
