@@ -450,6 +450,8 @@ namespace TerrainGenerator
             {
                 var top = new Acre(new Vector2Int(i, 0), numLayers - 1);
                 acres[i, 0] = top;
+                var top2 = new Acre(new Vector2Int(i, 1), numLayers - 1);
+                acres[i, 1] = top2;
 
                 var bottom = new Acre(new Vector2Int(i, numAcres.y - 1), 0);
                 acres[i, numAcres.y - 1] = bottom;
@@ -461,7 +463,7 @@ namespace TerrainGenerator
         {
             for (int x = 0; x < numAcres.x; x++)
             {
-                for (int y = 1; y < numAcres.y - 1; y++)
+                for (int y = 2; y < numAcres.y - 1; y++)
                 {
                     int previousElevation = acres[x, y - 1].elevation;
 

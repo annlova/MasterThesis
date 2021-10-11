@@ -56,6 +56,10 @@ public class ShellGenerator : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        var o = GameObject.Find("TerrainGenerator");
+        mesh = o.transform.Find("Flats").gameObject;
+        
+        
         sun = GameObject.Find("Sun").GetComponent<Light>();
         prevSunColor = sun.color;
         
