@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3519825386269003320}
   - component: {fileID: 4736848208427108885}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Collider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -55,9 +55,9 @@ GameObject:
   - component: {fileID: 8378662344625376059}
   - component: {fileID: 1631622047456414643}
   - component: {fileID: -7511558181221131132}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: CliffSouthEdge
-  m_TagString: Untagged
+  m_TagString: Cliff
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
