@@ -14,7 +14,7 @@ namespace TerrainGenerator
         [SerializeField]
         private float stepDeltaTime;
         
-        [SerializeField] 
+        [SerializeField]
         private Vector2Int numAcres;
 
         [SerializeField] 
@@ -30,6 +30,12 @@ namespace TerrainGenerator
         private int maxCliffEat;
         
         [SerializeField]
+        private int slopeWidth;
+        
+        [SerializeField]
+        private int slopeLength;
+        
+        [SerializeField]
         private CliffTile[] cliffTiles;
         
         [SerializeField] 
@@ -37,16 +43,51 @@ namespace TerrainGenerator
 
         [SerializeField]
         private GameObject slopeCliffPrefab;
+
+        [SerializeField]
+        private GameObject slopeCliffRoofPrefab;
+
+        [SerializeField]
+        private GameObject slopeCliffEndSWPrefab;
         
+        [SerializeField]
+        private GameObject slopeCliffEndHighFloorSWPrefab;
+        
+        [SerializeField]
+        private GameObject slopeCliffEndLowFloorSWPrefab;
+        
+        [SerializeField]
+        private GameObject slopeCliffEndHighRoofSWPrefab;
+
+        [SerializeField]
+        private GameObject slopeCliffSpecialSWPrefab;
+        
+        [SerializeField]
+        private GameObject slopeCliffEndSEPrefab;
+        
+        [SerializeField]
+        private GameObject slopeCliffEndHighFloorSEPrefab;
+        
+        [SerializeField]
+        private GameObject slopeCliffEndLowFloorSEPrefab;
+        
+        [SerializeField]
+        private GameObject slopeCliffEndHighRoofSEPrefab;
+
+        [SerializeField]
+        private GameObject slopeCliffSpecialSEPrefab;
+
         // Private variables outside of terrain generation
 
         private ComputeBuffer tileValueBuffer;
         private Vector4[] tileValues;
 
-        private GameObject flatsObject;
+        private GameObject flatsRenderObject;
+        private GameObject flatsColliderObject;
         private MeshFilter flatsMeshFilter;
         private Renderer flatsRenderer;
-        private GameObject cliffsObject;
+        private GameObject cliffsRenderObject;
+        private GameObject cliffsColliderObject;
         private MeshFilter cliffsMeshFilter;
         private Renderer cliffsRenderer;
 
@@ -228,57 +269,154 @@ namespace TerrainGenerator
                     }
                     else if (tile.isSlope)
                     {
-                        if (tile.isSlopeCliff)
+                        if (tile.isSlopeCliff && tile.isSlopeHigher)
                         {
                             var p = new Vector3(x + 0.5f, (tile.elevation - 1) * elevationHeight, height - 1 - z + 0.5f);
-                            Instantiate(slopeCliffPrefab, p, Quaternion.identity, transform);
                             var pRoof = p + new Vector3(0.0f, elevationHeight, 0.0f);
-                            Instantiate(flatTilePrefab, pRoof, Quaternion.identity, transform);
+                            float rotation = 0.0f;
+                            if (tile.isSlopeEdge1)
+                            {
+                                rotation = 270.0f;
+                            }
+                            else
+                            {
+                                rotation = 90.0f;
+                            }
+
+                            if (tile.slopeFactor > 0)
+                            {
+                                Instantiate(slopeCliffPrefab, p, Quaternion.Euler(0.0f, rotation, 0.0f), transform);
+                                Instantiate(slopeCliffRoofPrefab, p + Vector3.up * elevationHeight, Quaternion.Euler(0.0f, rotation, 0.0f), transform);
+                            }
+                            else
+                            {
+                                if (tile.isSlopeEdge1)
+                                {
+                                    Instantiate(slopeCliffEndSWPrefab, p, slopeCliffEndSWPrefab.transform.rotation, transform);
+                                    Instantiate(slopeCliffEndHighRoofSWPrefab, p + Vector3.up * elevationHeight,
+                                        Quaternion.identity, transform);
+                                }
+                                else
+                                {
+                                    Instantiate(slopeCliffEndSEPrefab, p, slopeCliffEndSEPrefab.transform.rotation, transform);
+                                    Instantiate(slopeCliffEndHighRoofSEPrefab, p + Vector3.up * elevationHeight,
+                                        Quaternion.identity, transform);
+                                }
+                            }
                         }
-                        else
+
+                        if (tile.isSlopeLowEnd)
+                        {
+                            var p = new Vector3(x + 0.5f, (tile.elevation - 1) * elevationHeight, height - 1 - z + 0.5f);
+                            CliffTile ct = null;
+                            bool specialSW = false;
+                            bool specialSE = false;
+                            if (tile.isSlopeEdge1)
+                            {
+                                if (tile.cliffTile.slopeSouthWestConnectionIndex < 0)
+                                {
+                                    specialSW = true;
+                                }
+                                else
+                                {
+                                    ct = cliffTiles[tile.cliffTile.slopeSouthWestConnectionIndex];
+                                }
+                            }
+                            else if (tile.isSlopeEdge2)
+                            {
+                                if (tile.cliffTile.slopeSouthEastConnectionIndex < 0)
+                                {
+                                    specialSE = true;
+                                }
+                                else
+                                {
+                                    ct = cliffTiles[tile.cliffTile.slopeSouthEastConnectionIndex];
+                                }
+                            }
+
+                            if (specialSW)
+                            {
+                                Instantiate(slopeCliffSpecialSWPrefab, p, Quaternion.identity, transform);
+                            }
+                            else if (specialSE)
+                            {
+                                Instantiate(slopeCliffSpecialSEPrefab, p, Quaternion.identity, transform);
+                            }
+                            else if (ct != null)
+                            {
+                                var rotation = ct.prefab.transform.rotation;
+                                Instantiate(ct.prefab, p, rotation, transform);
+                                // Instantiate(tile.cliffTile.prefab, p + Vector3.up * elevationHeight, tile.cliffTile.prefab.transform.rotation, transform);
+                                Instantiate(ct.prefabRoof, p + Vector3.up * elevationHeight, rotation, transform);
+                            }
+                        }
+                        
                         {
                             var angleRad = (float) (Math.Atan(elevationHeight / slopeLength));
                             var angleDeg = (float) -(angleRad * (180.0 / Math.PI));
                             var scaleFactor = (float) (Math.Sqrt(slopeLength * slopeLength + elevationHeight * elevationHeight) / slopeLength);
-                            var y = tile.elevation - (float) tile.slopeFactor / slopeLength;
+                            var yOffset = (float) tile.slopeFactor / slopeLength;
+                            var y = tile.elevation - yOffset;
                             y *= elevationHeight;
                             y -= (float) Math.Sin(angleRad) * scaleFactor * 0.5f;
                             var p = new Vector3(x + 0.5f, y, height - 1 - z + 0.5f);
-                            var o = Instantiate(flatTilePrefab, p, Quaternion.Euler(angleDeg, 0.0f, 0.0f), transform);
+                            var prefab = flatTilePrefab;
+                            if (tile.isSlopeCliff)
+                            {
+                                if (tile.isSlopeEdge1 && tile.slopeFactor == 0)
+                                {
+                                    prefab = slopeCliffEndHighFloorSWPrefab;
+                                }
+                                else if (tile.isSlopeEdge2 && tile.slopeFactor == 0)
+                                {
+                                    prefab = slopeCliffEndHighFloorSEPrefab;
+                                }
+                                else if (tile.isSlopeEdge1 && tile.isSlopeLowEnd)
+                                {
+                                    prefab = slopeCliffEndLowFloorSWPrefab;
+                                }
+                                else if (tile.isSlopeEdge2 && tile.isSlopeLowEnd)
+                                {
+                                    prefab = slopeCliffEndLowFloorSEPrefab;
+                                }
+                            }
+                            var o = Instantiate(prefab, p, Quaternion.Euler(angleDeg, 0.0f, 0.0f), transform);
                             var oScale = o.transform.localScale;
                             oScale.z *= scaleFactor;
                             o.transform.localScale = oScale;
 
-                            if (tile.slopeFactor == 0)
+                            // Set all normals straight up
+                            var mesh = o.GetComponent<MeshFilter>().mesh;
+                            var normals = mesh.normals;
+                            for (int i = 0; i < normals.Length; i++)
                             {
-                                var mesh = o.GetComponent<MeshFilter>().mesh;
-                                var vertices = mesh.vertices;
-                                var normals = mesh.normals;
-                                for (int i = 0; i < vertices.Length; i++)
-                                {
-                                    if (vertices[i].z > 0.0f)
-                                    {
-                                        normals[i] = Quaternion.Euler(-angleDeg, 0.0f, 0.0f) * Vector3.up;
-                                    }
-                                }
-                                
-                                mesh.normals = normals;
+                                normals[i] = Quaternion.Euler(-angleDeg, 0.0f, 0.0f) * Vector3.up;
                             }
                             
-                            if (tile.slopeFactor == slopeLength - 1)
+                            mesh.normals = normals;
+
+                            if ((tile.isSlopeEdge1 || tile.isSlopeEdge2) && tile.isSlopeLower)
                             {
-                                var mesh = o.GetComponent<MeshFilter>().mesh;
                                 var vertices = mesh.vertices;
-                                var normals = mesh.normals;
                                 for (int i = 0; i < vertices.Length; i++)
                                 {
-                                    if (vertices[i].z < 0.0f)
+                                    if (vertices[i].x < -0.1f && tile.isSlopeEdge1 || vertices[i].x > 0.1f && tile.isSlopeEdge2)
                                     {
-                                        normals[i] = Quaternion.AngleAxis(-angleDeg, Vector3.right) * Vector3.up;
+                                        var offset = y - (tile.elevation - 1) * 2;//-(elevationHeight - yOffset * elevationHeight - (float) Math.Sin(angleRad));
+                                        if (vertices[i].z > 0.0f)
+                                        {
+                                            offset += (float) (Math.Sin(angleRad) * 0.5 * scaleFactor);
+                                        }
+                                        else
+                                        {
+                                            offset -= (float) (Math.Sin(angleRad) * 0.5 * scaleFactor);
+                                        }
+                                        
+                                        vertices[i] -= Quaternion.Inverse(o.transform.rotation) * Vector3.up * offset;//Quaternion.AngleAxis(-angleDeg, Vector3.right) * Vector3.up * offset;
                                     }
                                 }
 
-                                mesh.normals = normals;
+                                mesh.vertices = vertices;
                             }
                         }
                     }
@@ -344,7 +482,7 @@ namespace TerrainGenerator
                         var flatCollider = meshFilters[i].gameObject.transform.Find("Collider");
                         if (flatCollider)
                         {
-                            flatCollider.transform.SetParent(flatsObject.transform);
+                            flatCollider.transform.SetParent(flatsColliderObject.transform);
                         }
                         combineFlats.Add(flat);
                         break;
@@ -355,7 +493,7 @@ namespace TerrainGenerator
                         var cliffCollider = meshFilters[i].gameObject.transform.Find("Collider");
                         if (cliffCollider)
                         {
-                            cliffCollider.transform.SetParent(cliffsObject.transform);
+                            cliffCollider.transform.SetParent(cliffsColliderObject.transform);
                         }
                         combineCliffs.Add(cliff);
                         break;
@@ -407,13 +545,16 @@ namespace TerrainGenerator
             width = numAcres.x * acreSize;
             height = numAcres.y * acreSize;
 
-            flatsObject = transform.Find("Flats").gameObject;
-            flatsMeshFilter = flatsObject.GetComponent<MeshFilter>();
-            flatsRenderer = flatsObject.GetComponent<Renderer>();
+            flatsRenderObject = transform.Find("FlatsRender").gameObject;
+            flatsColliderObject = transform.Find("FlatsCollider").gameObject;
+            flatsMeshFilter = flatsRenderObject.GetComponent<MeshFilter>();
+            flatsRenderer = flatsRenderObject.GetComponent<Renderer>();
 
-            cliffsObject = transform.Find("Cliffs").gameObject;
-            cliffsMeshFilter = cliffsObject.GetComponent<MeshFilter>();
-            cliffsRenderer = cliffsObject.GetComponent<Renderer>();
+
+            cliffsRenderObject = transform.Find("CliffsRender").gameObject;
+            cliffsColliderObject = transform.Find("CliffsCollider").gameObject;
+            cliffsMeshFilter = cliffsRenderObject.GetComponent<MeshFilter>();
+            cliffsRenderer = cliffsRenderObject.GetComponent<Renderer>();
             
             tileValues = new Vector4[width * height];
             for (int i = 0; i < tileValues.Length; i++)
@@ -1109,15 +1250,12 @@ namespace TerrainGenerator
 
             return islands;
         }
-
-        // TODO: Move
-        private int slopeWidth = 6;
-        private int slopeLength = 6;
+        
         private bool AddSlope(Acre acre)
         {
             // Find placement
             Vector2Int placementPos = Vector2Int.zero;
-            bool valid = false;
+            var validPlacements = new List<Vector2Int>();
 
             // For each tile in acre
             var p = acre.pos * acreSize;
@@ -1126,7 +1264,7 @@ namespace TerrainGenerator
                 for (int x = p.x; x < p.x + acreSize - slopeWidth; x++)
                 {
                     // Check if placement valid
-                    valid = true;
+                    bool valid = true;
                     for (int i = 0; i < slopeWidth; i++)
                     {
                         var tileAbove = tiles[x + i, y];
@@ -1137,40 +1275,102 @@ namespace TerrainGenerator
 
                     if (valid)
                     {
-                        placementPos = new Vector2Int(x, y);
-                        break;
+                        validPlacements.Add(new Vector2Int(x, y));
                     }
-                }
-
-                if (valid)
-                {
-                    break;
                 }
             }
 
-            // If valid placement found, add slope
-            if (valid)
+            // Find best placement from valid ones
+            var targetPlacement = new Vector2Int(p.x + acreSize / 2 - slopeWidth / 2, p.y + acreSize / 2);
+            float lowestDist = acreSize;
+            foreach (var placement in validPlacements)
             {
+                var dist = Vector2Int.Distance(placement, targetPlacement);
+                if (dist < lowestDist)
+                {
+                    lowestDist = dist;
+                    placementPos = placement;
+                }
+            }
+            
+            // If valid placement found, add slope
+            if (validPlacements.Count > 0)
+            {
+                bool[] high = {true, true};
                 for (int y = placementPos.y; y < placementPos.y + slopeLength; y++)
                 {
                     for (int x = placementPos.x; x < placementPos.x + slopeWidth; x++)
                     {
                         var tile = tiles[x, y];
-                        tile.isCliff = false;
+                        
                         tile.isSlope = true;
                         tile.slopeFactor = y - placementPos.y;
                         tile.elevation = acre.elevation;
 
-                        if (x - placementPos.x == 0 ||
-                            x == placementPos.x + slopeWidth - 1)
+                        if (x - placementPos.x == 0)
                         {
-                            tile.isSlopeCliff = true;
+                            tile.isSlopeEdge1 = true;
+
+                            bool lowestCliff = true;
+                            if (tile.connectedCliffs.Count >= 1)
+                            {
+                                lowestCliff = !(tile.connectedCliffs[0].pos == tile.pos + new Vector2Int(0, 1));
+                            }
+
+                            if (tile.isCliff && high[0] && lowestCliff)
+                            {
+                                tile.isCliff = false;
+                                tile.isSlopeLowEnd = true;
+                                tile.isSlopeCliff = true;
+                                tile.isSlopeHigher = false;
+                                tile.isSlopeLower = true;
+                                high[0] = false;
+                            }
+                            else
+                            {
+                                tile.isCliff = false;
+                                tile.isSlopeCliff = high[0];
+                                tile.isSlopeHigher = high[0];
+                                tile.isSlopeLower = !high[0];
+                            }
+                        }
+                        else if (x == placementPos.x + slopeWidth - 1)
+                        {
+                            tile.isSlopeEdge2 = true;
+
+
+                            bool lowestCliff = true;
+                            if (tile.connectedCliffs.Count >= 2)
+                            {
+                                lowestCliff = !(tile.connectedCliffs[1].pos == tile.pos + new Vector2Int(0, 1));
+                            }
+                            
+                            if (tile.isCliff && high[1] && lowestCliff)
+                            {
+                                tile.isCliff = false;
+                                tile.isSlopeLowEnd = true;
+                                tile.isSlopeCliff = true;
+                                tile.isSlopeHigher = false;
+                                tile.isSlopeLower = true;
+                                high[1] = false;
+                            }
+                            else
+                            {
+                                tile.isCliff = false;
+                                tile.isSlopeCliff = high[1];
+                                tile.isSlopeHigher = high[1];
+                                tile.isSlopeLower = !high[1];
+                            }
+                        }
+                        else
+                        {
+                            tile.isCliff = false;
                         }
                     }
                 }
             }
 
-            return valid;
+            return validPlacements.Count > 0;
         }
         
         private bool IsAcre(Vector2Int pos)

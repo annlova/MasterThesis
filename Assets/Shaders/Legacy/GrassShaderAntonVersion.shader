@@ -203,8 +203,8 @@ Shader "Unlit/GrassShader"
             }
             
             float random2 (float2 st) {
-                return frac(sin(dot(st.xy, float2(12.9898,78.233))) * 43758.545);
-                // return hash42(st).x;
+                // return frac(sin(dot(st.xy, float2(12.9898,78.233))) * 43758.545);
+                return hash42(st).x;
             }
             
             float random(float2 st)

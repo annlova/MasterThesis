@@ -11,6 +11,12 @@ namespace TerrainGenerator
     public CliffTileRule[] rules;
     public CliffOverlap[] overlaps;
     public bool isEndTile;
+    public int slopeSouthWestConnectionIndex;
+    public int slopeSouthEastConnectionIndex;
+    public int slopeWestNorthConnectionIndex;
+    public int slopeWestSouthConnectionIndex;
+    public int slopeEastNorthConnectionIndex;
+    public int slopeEastSouthConnectionIndex;
   }
 
   [Serializable]

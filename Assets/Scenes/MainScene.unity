@@ -649,7 +649,7 @@ GameObject:
   - component: {fileID: 1081042295}
   - component: {fileID: 1081042294}
   m_Layer: 7
-  m_Name: Cliffs
+  m_Name: CliffsRender
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -688,7 +688,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: eefa5ed2128ed9d4297a49a77e0817d2, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -718,6 +718,36 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1081042292}
   m_Mesh: {fileID: 0}
+--- !u!1 &1145770589
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1145770590}
+  m_Layer: 0
+  m_Name: CliffsCollider
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1145770590
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1145770589}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 1595967272}
+  m_RootOrder: 3
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1238220170
 GameObject:
   m_ObjectHideFlags: 0
@@ -730,7 +760,7 @@ GameObject:
   - component: {fileID: 1238220173}
   - component: {fileID: 1238220172}
   m_Layer: 6
-  m_Name: Flats
+  m_Name: FlatsRender
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -744,7 +774,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1238220170}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -10, z: 0}
+  m_LocalPosition: {x: 0, y: -10, z: -50}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 1595967272}
@@ -809,8 +839,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1595967272}
   - component: {fileID: 1595967271}
-  - component: {fileID: 1595967274}
-  - component: {fileID: 1595967273}
   m_Layer: 0
   m_Name: TerrainGenerator
   m_TagString: Untagged
@@ -833,9 +861,11 @@ MonoBehaviour:
   stepDeltaTime: 0.05
   numAcres: {x: 5, y: 6}
   acreSize: 16
-  elevationRangeMin: 2
-  elevationRangeMax: 3
+  elevationRangeMin: 4
+  elevationRangeMax: 4
   maxCliffEat: 5
+  slopeWidth: 9
+  slopeLength: 6
   cliffTiles:
   - prefab: {fileID: 8047990961297840060, guid: e39b9f2c4b591554c918b1031a268ebc, type: 3}
     prefabRoof: {fileID: 8071290532819579765, guid: 68c190da55e188b4fa8b629f54fe8fa6, type: 3}
@@ -940,6 +970,12 @@ MonoBehaviour:
       fromNorth: 0
       fromSouth: 0
     isEndTile: 1
+    slopeSouthWestConnectionIndex: -1
+    slopeSouthEastConnectionIndex: -1
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 4493341112322557009, guid: 292283386546d7c449665c9183cf2461, type: 3}
     prefabRoof: {fileID: 7173815904388574043, guid: e4d9f75b5cf5d4647acbfcf54da0a5cd, type: 3}
     rules:
@@ -1043,6 +1079,12 @@ MonoBehaviour:
       fromNorth: 0
       fromSouth: 0
     isEndTile: 1
+    slopeSouthWestConnectionIndex: -1
+    slopeSouthEastConnectionIndex: -1
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 6563234418305932423, guid: 06280a8813b1cf64e81474ad478b5735, type: 3}
     prefabRoof: {fileID: 2199133809770877323, guid: b8c22f41e12af6243ba4b8ad50bf291d, type: 3}
     rules:
@@ -1154,6 +1196,12 @@ MonoBehaviour:
       fromNorth: 0
       fromSouth: 0
     isEndTile: 1
+    slopeSouthWestConnectionIndex: -1
+    slopeSouthEastConnectionIndex: 5
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 2562918120175183399, guid: 46b0622f9bfcc9742a1d05d23356baec, type: 3}
     prefabRoof: {fileID: 9131565268056128158, guid: 2a9102d1c0e3dd8418dcc48af31b12d3, type: 3}
     rules:
@@ -1257,6 +1305,12 @@ MonoBehaviour:
       fromNorth: 1
       fromSouth: 1
     isEndTile: 0
+    slopeSouthWestConnectionIndex: 3
+    slopeSouthEastConnectionIndex: -1
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 1583552235475031074, guid: 985317cb9f2b8c24693a0cf4465a0e06, type: 3}
     prefabRoof: {fileID: 2468069367706458692, guid: ee1c60ac8079f6141b753fb7a44e87b2, type: 3}
     rules:
@@ -1360,6 +1414,12 @@ MonoBehaviour:
       fromNorth: 1
       fromSouth: 1
     isEndTile: 0
+    slopeSouthWestConnectionIndex: 3
+    slopeSouthEastConnectionIndex: -1
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 5806880949837707257, guid: d9eb121a509d73043a6621fba8c62256, type: 3}
     prefabRoof: {fileID: 5874659767065371088, guid: 727b4b8f1803df741aa9ea7f5d633020, type: 3}
     rules:
@@ -1471,6 +1531,12 @@ MonoBehaviour:
       fromNorth: 0
       fromSouth: 0
     isEndTile: 1
+    slopeSouthWestConnectionIndex: -1
+    slopeSouthEastConnectionIndex: 5
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 97243798171963748, guid: f5375f04387d7f545a2f046cbbf5e2e1, type: 3}
     prefabRoof: {fileID: 158471934591709141, guid: a184c7b42706ff944963fb241ed3b3ac, type: 3}
     rules:
@@ -1574,6 +1640,12 @@ MonoBehaviour:
       fromNorth: 0
       fromSouth: 0
     isEndTile: 0
+    slopeSouthWestConnectionIndex: 19
+    slopeSouthEastConnectionIndex: 22
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 5716282353909128085, guid: d447f5d8df9a87a439daa57a653006ad, type: 3}
     prefabRoof: {fileID: 4791021554300515310, guid: cd9b97909985cd448aa5271528eab064, type: 3}
     rules:
@@ -1677,6 +1749,12 @@ MonoBehaviour:
       fromNorth: 0
       fromSouth: 0
     isEndTile: 1
+    slopeSouthWestConnectionIndex: -1
+    slopeSouthEastConnectionIndex: -1
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 8861116886435712288, guid: 5830697cafc95ee49be5af0b20d89808, type: 3}
     prefabRoof: {fileID: 4580572205653584910, guid: dcc9d9a4a49713d4fb11366d24ffeced, type: 3}
     rules:
@@ -1788,6 +1866,12 @@ MonoBehaviour:
       fromNorth: 1
       fromSouth: 1
     isEndTile: 1
+    slopeSouthWestConnectionIndex: 3
+    slopeSouthEastConnectionIndex: 5
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 8336174585280009521, guid: 4694a8f616fcb2d44a75c58e77847d6d, type: 3}
     prefabRoof: {fileID: 8915895425711252803, guid: df4452174550a29458b44aa6b0a231c5, type: 3}
     rules:
@@ -1899,6 +1983,12 @@ MonoBehaviour:
       fromNorth: 1
       fromSouth: 0
     isEndTile: 1
+    slopeSouthWestConnectionIndex: 19
+    slopeSouthEastConnectionIndex: 22
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 6271754865321112904, guid: dbbd24536f95d5b44a2ee3029a20e64f, type: 3}
     prefabRoof: {fileID: 417563451910512622, guid: 0ffb62ad55bbc5948ab5690ff3973245, type: 3}
     rules:
@@ -2002,6 +2092,12 @@ MonoBehaviour:
       fromNorth: 0
       fromSouth: 0
     isEndTile: 1
+    slopeSouthWestConnectionIndex: -1
+    slopeSouthEastConnectionIndex: -1
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 6588393564375003474, guid: 28ed5d2a662796245aa49677ef8fbeea, type: 3}
     prefabRoof: {fileID: 8011882421104071876, guid: 65b9c7bebd86e944680770d31c77e3b5, type: 3}
     rules:
@@ -2105,6 +2201,12 @@ MonoBehaviour:
       fromNorth: 0
       fromSouth: 1
     isEndTile: 1
+    slopeSouthWestConnectionIndex: -1
+    slopeSouthEastConnectionIndex: -1
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 6894740781890161386, guid: 58e5f088869f32a46a0768dca3a5e279, type: 3}
     prefabRoof: {fileID: 722611076918976958, guid: 5d80e607f3b82154c8ba719ca5d76cd6, type: 3}
     rules:
@@ -2208,6 +2310,12 @@ MonoBehaviour:
       fromNorth: 0
       fromSouth: 1
     isEndTile: 0
+    slopeSouthWestConnectionIndex: -1
+    slopeSouthEastConnectionIndex: -1
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 5202092899246453843, guid: 58baac4e350b5a1438b35489a89f4474, type: 3}
     prefabRoof: {fileID: 4165252266918124350, guid: 2830384d52028c84798eff1cffa99806, type: 3}
     rules:
@@ -2311,6 +2419,12 @@ MonoBehaviour:
       fromNorth: 1
       fromSouth: 0
     isEndTile: 0
+    slopeSouthWestConnectionIndex: -1
+    slopeSouthEastConnectionIndex: -1
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 8966690995299346879, guid: c11c703db50a64348a221743ca66f17e, type: 3}
     prefabRoof: {fileID: 10345127971123963, guid: b6e38600d6f998a4f92fd694d5767402, type: 3}
     rules:
@@ -2414,6 +2528,12 @@ MonoBehaviour:
       fromNorth: 1
       fromSouth: 0
     isEndTile: 1
+    slopeSouthWestConnectionIndex: -1
+    slopeSouthEastConnectionIndex: -1
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 8237679264452451494, guid: 20974066ada1f9940aaa5aa0edde1603, type: 3}
     prefabRoof: {fileID: 1829759142058625977, guid: c1e435b7db317fc4fa5b7b95099dad69, type: 3}
     rules:
@@ -2517,6 +2637,12 @@ MonoBehaviour:
       fromNorth: 0
       fromSouth: 0
     isEndTile: 1
+    slopeSouthWestConnectionIndex: -1
+    slopeSouthEastConnectionIndex: -1
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 8136956208648583469, guid: 8b159ccaa30e3b14b9d1f7547145fdd5, type: 3}
     prefabRoof: {fileID: 7843607605289821546, guid: 104acf0898c2e024a8b282f2f0030893, type: 3}
     rules:
@@ -2628,6 +2754,12 @@ MonoBehaviour:
       fromNorth: 1
       fromSouth: 0
     isEndTile: 1
+    slopeSouthWestConnectionIndex: 19
+    slopeSouthEastConnectionIndex: 5
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 4461251489075437722, guid: 446b5b66456e63747a9130c37afa20fe, type: 3}
     prefabRoof: {fileID: 2875084615994886482, guid: 2123ded06d05b9045b9642464c72dbcc, type: 3}
     rules:
@@ -2751,6 +2883,12 @@ MonoBehaviour:
       fromNorth: 0
       fromSouth: 0
     isEndTile: 1
+    slopeSouthWestConnectionIndex: -1
+    slopeSouthEastConnectionIndex: -1
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 1612946943923133730, guid: 5b480bf17bb16cf48b0d1de61322c1e5, type: 3}
     prefabRoof: {fileID: 1878075874740061357, guid: 4b8526adbe423d44089a7464c062563e, type: 3}
     rules:
@@ -2874,6 +3012,12 @@ MonoBehaviour:
       fromNorth: 1
       fromSouth: 1
     isEndTile: 1
+    slopeSouthWestConnectionIndex: 3
+    slopeSouthEastConnectionIndex: -1
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 8329703451285147258, guid: 81f0deb91b1b26a45b36d0a477f78d05, type: 3}
     prefabRoof: {fileID: 8650926319752878997, guid: 4551658f9f5debd41bfda56428560098, type: 3}
     rules:
@@ -2977,6 +3121,12 @@ MonoBehaviour:
       fromNorth: 1
       fromSouth: 0
     isEndTile: 0
+    slopeSouthWestConnectionIndex: 19
+    slopeSouthEastConnectionIndex: -1
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 61686874333845557, guid: 032b4bdc01b42d449b8616caccfd9d62, type: 3}
     prefabRoof: {fileID: 5126362632163562477, guid: eadee2878cf3d9d4b8c9da2cb4b44b91, type: 3}
     rules:
@@ -3080,6 +3230,12 @@ MonoBehaviour:
       fromNorth: 0
       fromSouth: 1
     isEndTile: 0
+    slopeSouthWestConnectionIndex: -1
+    slopeSouthEastConnectionIndex: -1
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 5330413263030606247, guid: 3f3ac34c0de65e84082ca7e3326700b0, type: 3}
     prefabRoof: {fileID: 3721026680680749637, guid: 2b6aac26d38c23145b0cf69ea14d9b94, type: 3}
     rules:
@@ -3203,6 +3359,12 @@ MonoBehaviour:
       fromNorth: 1
       fromSouth: 1
     isEndTile: 1
+    slopeSouthWestConnectionIndex: 3
+    slopeSouthEastConnectionIndex: 22
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 3271193866369620614, guid: ad9f7d11082c1d845bbd1e461831fc08, type: 3}
     prefabRoof: {fileID: 9058434650933715726, guid: a564f651038d33b44b79b5cdd26cd0a4, type: 3}
     rules:
@@ -3326,6 +3488,12 @@ MonoBehaviour:
       fromNorth: 0
       fromSouth: 0
     isEndTile: 1
+    slopeSouthWestConnectionIndex: -1
+    slopeSouthEastConnectionIndex: 22
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 3147153678389939258, guid: 14985ccc4b0cb1444a916bf9169082d0, type: 3}
     prefabRoof: {fileID: 5679793531884747651, guid: 381d6bc8d7d021b41b3d6c7e41ac1199, type: 3}
     rules:
@@ -3437,6 +3605,12 @@ MonoBehaviour:
       fromNorth: 0
       fromSouth: 1
     isEndTile: 1
+    slopeSouthWestConnectionIndex: -1
+    slopeSouthEastConnectionIndex: 5
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 9027947751483204575, guid: 5b71b7173a943a740befea93e0e84295, type: 3}
     prefabRoof: {fileID: 3315509120037890733, guid: cba7ab7385054354ab155577fe34d78f, type: 3}
     rules:
@@ -3540,6 +3714,12 @@ MonoBehaviour:
       fromNorth: 0
       fromSouth: 0
     isEndTile: 0
+    slopeSouthWestConnectionIndex: -1
+    slopeSouthEastConnectionIndex: -1
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   - prefab: {fileID: 1985986583467892826, guid: 6d86505b6091945409f419e5e1122161, type: 3}
     prefabRoof: {fileID: 7567334285465949627, guid: 216944826dbc52549a5d4f491c14ba8c, type: 3}
     rules:
@@ -3643,8 +3823,25 @@ MonoBehaviour:
       fromNorth: 1
       fromSouth: 1
     isEndTile: 0
+    slopeSouthWestConnectionIndex: -1
+    slopeSouthEastConnectionIndex: -1
+    slopeWestNorthConnectionIndex: 0
+    slopeWestSouthConnectionIndex: 0
+    slopeEastNorthConnectionIndex: 0
+    slopeEastSouthConnectionIndex: 0
   flatTilePrefab: {fileID: 407490739736649621, guid: ee6ecb737bd9bc74f823336e586dfa0f, type: 3}
-  slopeCliffPrefab: {fileID: 4736021941745907678, guid: 18c83426b579950409edfdec3774980f, type: 3}
+  slopeCliffPrefab: {fileID: 8861116886435712288, guid: 5830697cafc95ee49be5af0b20d89808, type: 3}
+  slopeCliffRoofPrefab: {fileID: 4580572205653584910, guid: dcc9d9a4a49713d4fb11366d24ffeced, type: 3}
+  slopeCliffEndSWPrefab: {fileID: 6894740781890161386, guid: 58e5f088869f32a46a0768dca3a5e279, type: 3}
+  slopeCliffEndHighFloorSWPrefab: {fileID: 5184404731066158937, guid: 42999a7adecde2a46b47c1817e283656, type: 3}
+  slopeCliffEndLowFloorSWPrefab: {fileID: 2525624233406638375, guid: b1c98c390fa48f840a2e98fb02bbf623, type: 3}
+  slopeCliffEndHighRoofSWPrefab: {fileID: 1699069627030150368, guid: 1031af22757463b4691361abcb7b6d71, type: 3}
+  slopeCliffSpecialSWPrefab: {fileID: 5372784347216870320, guid: 5151bfbb9c2ba7a40b65b64f237143c4, type: 3}
+  slopeCliffEndSEPrefab: {fileID: 8237679264452451494, guid: 20974066ada1f9940aaa5aa0edde1603, type: 3}
+  slopeCliffEndHighFloorSEPrefab: {fileID: 2982713525539678875, guid: 2c2f9d2dc44eead479e08af85210426d, type: 3}
+  slopeCliffEndLowFloorSEPrefab: {fileID: 2525624233406638375, guid: b1c98c390fa48f840a2e98fb02bbf623, type: 3}
+  slopeCliffEndHighRoofSEPrefab: {fileID: 7310051215920508630, guid: d453ba53cba2dab4781fb99db30a6fdd, type: 3}
+  slopeCliffSpecialSEPrefab: {fileID: 529439155956243859, guid: 61a1dcffb5e1056428a2d12be4166d3a, type: 3}
 --- !u!4 &1595967272
 Transform:
   m_ObjectHideFlags: 0
@@ -3658,58 +3855,11 @@ Transform:
   m_Children:
   - {fileID: 1238220171}
   - {fileID: 1081042293}
+  - {fileID: 1979133485}
+  - {fileID: 1145770590}
   m_Father: {fileID: 0}
   m_RootOrder: 7
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!23 &1595967273
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1595967270}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: eefa5ed2128ed9d4297a49a77e0817d2, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!33 &1595967274
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1595967270}
-  m_Mesh: {fileID: 0}
 --- !u!1 &1613587637 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 93883a07e36d0c84285c9805752f94ca, type: 3}
@@ -3994,6 +4144,36 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 6
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1979133484
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1979133485}
+  m_Layer: 0
+  m_Name: FlatsCollider
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1979133485
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1979133484}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 1595967272}
+  m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2059975468
 GameObject:

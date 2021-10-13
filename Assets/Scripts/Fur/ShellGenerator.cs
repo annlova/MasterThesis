@@ -57,7 +57,7 @@ public class ShellGenerator : MonoBehaviour
     void Start()
     {
         var o = GameObject.Find("TerrainGenerator");
-        mesh = o.transform.Find("Flats").gameObject;
+        mesh = o.transform.Find("FlatsRender").gameObject;
         
         
         sun = GameObject.Find("Sun").GetComponent<Light>();
