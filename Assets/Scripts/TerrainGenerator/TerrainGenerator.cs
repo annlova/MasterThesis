@@ -30,6 +30,12 @@ namespace TerrainGenerator
         private int maxCliffEat;
         
         [SerializeField]
+        private int numRivers;
+        
+        [SerializeField]
+        private int riverWidth;
+        
+        [SerializeField]
         private int slopeWidth;
         
         [SerializeField]
@@ -40,6 +46,9 @@ namespace TerrainGenerator
         
         [SerializeField] 
         private GameObject flatTilePrefab;
+
+        [SerializeField]
+        private GameObject riverTilePrefab;
 
         [SerializeField]
         private GameObject slopeCliffPrefab;
@@ -90,6 +99,13 @@ namespace TerrainGenerator
         private GameObject cliffsColliderObject;
         private MeshFilter cliffsMeshFilter;
         private Renderer cliffsRenderer;
+        private GameObject riversRenderObject;
+        private GameObject riversColliderObject;
+        private MeshFilter riversMeshFilter;
+        private Renderer riversRenderer;
+        private GameObject riversBottomRenderObject;
+        private MeshFilter riversBottomMeshFilter;
+        private Renderer riversBottomRenderer;
 
         // Start is called before the first frame update
         void Start()
@@ -107,6 +123,7 @@ namespace TerrainGenerator
             InitPossibleFloors();
             LevelTerrain();
             ComputeCliffFloors();
+            ComputeRivers();
             ComputeSlopes();
             CreateTerrainMesh();
             UpdateShaderVariables();
@@ -237,16 +254,18 @@ namespace TerrainGenerator
                 for (int x = 0; x < width; x++)
                 {
                     var tile = tiles[x, z];
+                    var riverOffset = tile.isRiver ? 0.5f : 0.0f;
                     if (tile.isCliff)
                     {
+                        Vector3 p = Vector3.zero;
                         for (int i = tile.floor; i < tile.elevation; i++)
                         {
-                            var p = new Vector3(x + 0.5f, i * 2, height - 1 - z + 0.5f);
+                            p = new Vector3(x + 0.5f, i * 2 - riverOffset, height - 1 - z + 0.5f);
                             Instantiate(tile.cliffTile.prefab, p, tile.cliffTile.prefab.transform.rotation, transform);
                         }
                         
-                        var pRoof = new Vector3(x + 0.5f, tile.elevation * elevationHeight, height - 1 - z + 0.5f);
-                        Instantiate(tile.cliffTile.prefabRoof, pRoof, tile.cliffTile.prefabRoof.transform.rotation, transform);
+                        var pRoof = new Vector3(x + 0.5f, tile.elevation * elevationHeight - riverOffset, height - 1 - z + 0.5f);
+                        var roofObj = Instantiate(tile.cliffTile.prefabRoof, pRoof, tile.cliffTile.prefabRoof.transform.rotation, transform);
 
                         if (tile.isMergeCliff)
                         {
@@ -255,17 +274,34 @@ namespace TerrainGenerator
                             {
                                 for (int i = tile.floor; i < item.Item1; i++)
                                 {
-                                    var p = new Vector3(x + 0.5f, i * elevationHeight, height - 1 - z + 0.5f);
-                                    Instantiate(item.Item2.prefab, p, item.Item2.prefab.transform.rotation, transform);
+                                    var pMerge = new Vector3(x + 0.5f, i * elevationHeight - riverOffset, height - 1 - z + 0.5f);
+                                    Instantiate(item.Item2.prefab, pMerge, item.Item2.prefab.transform.rotation, transform);
                                 }
 
-                                var pSubRoof = new Vector3(x + 0.5f, item.Item1 * elevationHeight, height - 1 - z + 0.5f);
+                                var pSubRoof = new Vector3(x + 0.5f, item.Item1 * elevationHeight - riverOffset, height - 1 - z + 0.5f);
                                 Instantiate(item.Item2.prefabRoof, pSubRoof, item.Item2.prefabRoof.transform.rotation, transform);
                             }
                         }
                         
-                        var pFloor = new Vector3(x + 0.5f, tile.floor * elevationHeight, height - 1 - z + 0.5f);
-                        Instantiate(flatTilePrefab, pFloor, Quaternion.identity, transform);
+                        var pFloor = new Vector3(x + 0.5f, tile.floor * elevationHeight - riverOffset, height - 1 - z + 0.5f);
+                        var floorObj = Instantiate(flatTilePrefab, pFloor, Quaternion.identity, transform);
+
+                        // TODO
+                        if (tile.isRiverEdge)
+                        {
+                            var riverEdgePrefab = cliffTiles[9].prefab;
+                            var rot = Quaternion.FromToRotation(Vector3.back, new Vector3(tile.riverEdgeDir.x, 0.0f, -tile.riverEdgeDir.y));
+                            Instantiate(riverEdgePrefab, p, rot * riverEdgePrefab.transform.rotation, transform);
+                        }
+                        else if (tile.isRiver)
+                        {
+                            floorObj.gameObject.tag = "RiverBottom";
+                            roofObj.gameObject.tag = "RiverBottom";
+                            var o1 = Instantiate(riverTilePrefab, pFloor + new Vector3(0.0f, riverOffset - 0.05f, 0.0f), Quaternion.identity, transform);
+                            var o2 = Instantiate(riverTilePrefab, pRoof + new Vector3(0.0f, riverOffset - 0.05f, 0.0f), Quaternion.identity, transform);
+                            setRiverDirAttribute(tile, o1);
+                            setRiverDirAttribute(tile, o2);
+                        }
                     }
                     else if (tile.isSlope)
                     {
@@ -422,11 +458,30 @@ namespace TerrainGenerator
                     }
                     else
                     {
-                        var p = new Vector3(x + 0.5f, tile.elevation * elevationHeight, height - 1 - z + 0.5f);
-                        Instantiate(flatTilePrefab, p, Quaternion.identity, transform);
+                        var p = new Vector3(x + 0.5f, tile.elevation * elevationHeight - riverOffset, height - 1 - z + 0.5f);
+                        var floorObj = Instantiate(flatTilePrefab, p, Quaternion.identity, transform);
+                        // TODO
+                        if (tile.isRiverEdge)
+                        {
+                            var riverEdgePrefab = cliffTiles[9].prefab;
+                            var rot = Quaternion.FromToRotation(Vector3.back, new Vector3(tile.riverEdgeDir.x, 0.0f, -tile.riverEdgeDir.y));
+                            Instantiate(riverEdgePrefab, p + Vector3.down * elevationHeight, rot * riverEdgePrefab.transform.rotation, transform);
+                        }
+                        else if (tile.isRiver)
+                        {
+                            floorObj.gameObject.tag = "RiverBottom";
+                            var o = Instantiate(riverTilePrefab, p + new Vector3(0.0f, riverOffset - 0.05f, 0.0f), Quaternion.identity, transform);
+                            setRiverDirAttribute(tile, o);
+                        }
                     }
 
-                    var islandIndexFactor = (float) tile.acre.islandIndex / numIslands;
+                    if (tile.acre.hasRiver)
+                    {
+                        tileValues[x + z * width].x = 0.6f;
+                        tileValues[x + z * width].y = 0.6f;
+                        tileValues[x + z * width].z = 0.9f;
+                    }
+                    
                     if (tile.isSlope)
                     {
                         tileValues[x + z * width].x = 0.8f;
@@ -449,6 +504,18 @@ namespace TerrainGenerator
             Combine();
         }
 
+        private void setRiverDirAttribute(Tile tile, GameObject obj)
+        {
+            var mesh = obj.GetComponent<MeshFilter>().mesh;
+            var uv2 = mesh.uv;
+            for (int i = 0; i < uv2.Length; i++)
+            {
+                uv2[i] = tile.riverDir;
+            }
+
+            mesh.uv2 = uv2;
+        }
+        
         private void UpdateShaderVariables()
         {
             flatsRenderer.sharedMaterial.SetInt("_AcreSize", acreSize);
@@ -469,6 +536,8 @@ namespace TerrainGenerator
             MeshFilter[] meshFilters = GetComponentsInChildren<MeshFilter>();
             var combineFlats = new List<CombineInstance>();
             var combineCliffs = new List<CombineInstance>();
+            var combineRivers = new List<CombineInstance>();
+            var combineRiversBottom = new List<CombineInstance>();
 
             int i = 0;
             while (i < meshFilters.Length)
@@ -497,6 +566,23 @@ namespace TerrainGenerator
                         }
                         combineCliffs.Add(cliff);
                         break;
+                    case "RiverSurface":
+                        var river = new CombineInstance();
+                        river.mesh = meshFilters[i].mesh;
+                        river.transform = meshFilters[i].transform.localToWorldMatrix;
+                        var riverCollider = meshFilters[i].gameObject.transform.Find("Collider");
+                        if (riverCollider)
+                        {
+                            riverCollider.transform.SetParent(riversColliderObject.transform);
+                        }
+                        combineRivers.Add(river);
+                        break;
+                    case "RiverBottom":
+                        var riverBottom = new CombineInstance();
+                        riverBottom.mesh = meshFilters[i].mesh;
+                        riverBottom.transform = meshFilters[i].transform.localToWorldMatrix;
+                        combineRiversBottom.Add(riverBottom);
+                        break;
                     default:
                         i++;
                         continue;
@@ -516,6 +602,16 @@ namespace TerrainGenerator
             cliffsMeshFilter.sharedMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
             cliffsMeshFilter.sharedMesh.CombineMeshes(combineCliffs.ToArray());
             cliffsMeshFilter.gameObject.SetActive(true);
+
+            riversMeshFilter.sharedMesh = new Mesh();
+            riversMeshFilter.sharedMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            riversMeshFilter.sharedMesh.CombineMeshes(combineRivers.ToArray());
+            riversMeshFilter.gameObject.SetActive(true);
+
+            riversBottomMeshFilter.sharedMesh = new Mesh();
+            riversBottomMeshFilter.sharedMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            riversBottomMeshFilter.sharedMesh.CombineMeshes(combineRiversBottom.ToArray());
+            riversBottomMeshFilter.gameObject.SetActive(true);
         }
 
         private void OnDisable()
@@ -550,11 +646,19 @@ namespace TerrainGenerator
             flatsMeshFilter = flatsRenderObject.GetComponent<MeshFilter>();
             flatsRenderer = flatsRenderObject.GetComponent<Renderer>();
 
-
             cliffsRenderObject = transform.Find("CliffsRender").gameObject;
             cliffsColliderObject = transform.Find("CliffsCollider").gameObject;
             cliffsMeshFilter = cliffsRenderObject.GetComponent<MeshFilter>();
             cliffsRenderer = cliffsRenderObject.GetComponent<Renderer>();
+            
+            riversRenderObject = transform.Find("RiversRender").gameObject;
+            riversColliderObject = transform.Find("RiversCollider").gameObject;
+            riversMeshFilter = riversRenderObject.GetComponent<MeshFilter>();
+            riversRenderer = riversRenderObject.GetComponent<Renderer>();
+            
+            riversBottomRenderObject = transform.Find("RiversBottomRender").gameObject;
+            riversBottomMeshFilter = riversBottomRenderObject.GetComponent<MeshFilter>();
+            riversBottomRenderer = riversBottomRenderObject.GetComponent<Renderer>();
             
             tileValues = new Vector4[width * height];
             for (int i = 0; i < tileValues.Length; i++)
@@ -622,6 +726,105 @@ namespace TerrainGenerator
 
                     var acre = new Acre(new Vector2Int(x, y), elevation);
                     acres[x, y] = acre;
+                }
+            }
+
+            for (int i = 0; i < numRivers; i++)
+            {
+                BasicAcreRiverSelection();
+            }
+        }
+
+        private void BasicAcreRiverSelection()
+        {
+            // Select top tile
+            var topX = Random.Range(0, numAcres.x);
+            var tries = 0;
+            while (acres[topX, 0].hasRiver && tries < numAcres.x)
+            {
+                topX = (topX + 1) % numAcres.x;
+                tries++;
+            }
+
+            if (tries == numAcres.x)
+            {
+                throw new NotSupportedException();
+            }
+            
+            // Do acre river walk
+            var acre = acres[topX, 0];
+            acre.hasRiver = true;
+            acre.hasRiverNorth = true;
+
+            while (true) {
+                var moveSelection = Random.Range(0, 3);
+                bool validSelection = false;
+                while (!validSelection)
+                {
+                    switch (moveSelection)
+                    {
+                        case 0:
+                            if (IsNeighbour(acre, Vector2Int.left))
+                            {
+                                var left = GetNeighbour(acre, Vector2Int.left);
+                                if (left.elevation <= acre.elevation && !left.hasRiverEast)
+                                {
+                                    acre.hasRiverWest = true;
+                                    acre.riverWestFlowsWest = true;
+                                    left.hasRiverEast = true;
+                                    left.riverEastFlowsEast = false;
+                                    acre = left;
+                                    validSelection = true;
+                                    continue;
+                                }
+                            }
+
+                            moveSelection = 2;
+                            break;
+                        case 1:
+                            if (IsNeighbour(acre, Vector2Int.right))
+                            {
+                                var right = GetNeighbour(acre, Vector2Int.right);
+                                if (right.elevation <= acre.elevation && !right.hasRiverWest)
+                                {
+                                    acre.hasRiverEast = true;
+                                    acre.riverEastFlowsEast = true;
+                                    right.hasRiverWest = true;
+                                    right.riverWestFlowsWest = false;
+                                    acre = right;
+                                    validSelection = true;
+                                    continue;
+                                }
+                            }
+
+                            moveSelection = 2;
+                            break;
+                        case 2:
+                            if (IsNeighbour(acre, Vector2Int.up))
+                            {
+                                acre.hasRiverSouth = true;
+                                var down = GetNeighbour(acre, Vector2Int.up);
+                                down.hasRiverNorth = true;
+                                acre = down;
+                                validSelection = true;
+                                continue;
+                            }
+
+                            // Done!
+                            acre.hasRiverSouth = true;
+                            return;
+                        default:
+                            throw new NotImplementedException();
+                    }
+                }
+
+                if (!acre.hasRiver)
+                {
+                    acre.hasRiver = true;
+                }
+                else
+                {
+                    return;
                 }
             }
         }
@@ -1268,9 +1471,9 @@ namespace TerrainGenerator
                     for (int i = 0; i < slopeWidth; i++)
                     {
                         var tileAbove = tiles[x + i, y];
-                        valid &= tileAbove.elevation == acre.elevation && !tileAbove.isCliff;
+                        valid &= tileAbove.elevation == acre.elevation && !tileAbove.isCliff && !tileAbove.isRiver;
                         var tileBelow = tiles[x + i, y + slopeLength - 1];
-                        valid &= tileBelow.elevation == acre.elevation - 1 && !tileBelow.isCliff;
+                        valid &= tileBelow.elevation == acre.elevation - 1 && !tileBelow.isCliff && !tileBelow.isRiver;
                     }
 
                     if (valid)
@@ -1371,6 +1574,161 @@ namespace TerrainGenerator
             }
 
             return validPlacements.Count > 0;
+        }
+
+        // TODO: Create real river walk agent
+        private void ComputeRivers()
+        {
+            foreach (var acre in acres)
+            {
+                if (acre.hasRiver)
+                {
+                    var pos = acre.pos * acreSize;
+                    var centerRiverDir = new Vector2(0.0f, 0.0f);
+                    if (acre.hasRiverNorth)
+                    {
+                        centerRiverDir += Vector2.down;
+                        for (int x = 0; x < riverWidth; x++)
+                        {
+                            for (int y = 0; y <= acreSize / 2; y++)
+                            {
+                                var p = new Vector2Int(pos.x + acreSize / 2 - riverWidth / 2 + x, pos.y + y);
+                                var t = tiles[p.x, p.y];
+                                if (t.isRiver)
+                                {
+                                    continue;
+                                }
+                                if (x == 0)
+                                {
+                                    tiles[p.x, p.y].isRiverEdge = true;
+                                    tiles[p.x, p.y].riverEdgeDir = new Vector2Int(1, 0);
+                                }
+                                else if (x == riverWidth - 1)
+                                {
+                                    tiles[p.x, p.y].isRiverEdge = true;
+                                    tiles[p.x, p.y].riverEdgeDir = new Vector2Int(-1, 0);
+                                }
+                                else
+                                {
+                                    tiles[p.x, p.y].isRiver = true;
+                                    tiles[p.x, p.y].isRiverEdge = false;
+                                    tiles[p.x, p.y].riverDir = Vector2.down;
+                                }
+                            }
+                        }
+                    }
+                    if (acre.hasRiverWest)
+                    {
+                        centerRiverDir += acre.riverWestFlowsWest ? Vector2.left : Vector2.right;
+                        for (int y = 0; y < riverWidth; y++)
+                        {
+                            for (int x = 0; x <= acreSize / 2; x++)
+                            {
+                                var p = new Vector2Int(pos.x + x, pos.y + acreSize / 2 - riverWidth / 2 + y);
+                                var t = tiles[p.x, p.y];
+                                if (t.isRiver)
+                                {
+                                    continue;
+                                }
+                                if (y == 0)
+                                {
+                                    t.isRiverEdge = true;
+                                    t.riverEdgeDir = new Vector2Int(0, 1);
+                                }
+                                else if (y == riverWidth - 1)
+                                {
+                                    t.isRiverEdge = true;
+                                    t.riverEdgeDir = new Vector2Int(0, -1);
+                                }
+                                else
+                                {
+                                    t.isRiver = true;
+                                    t.isRiverEdge = false;
+                                    t.riverDir = t.acre.riverWestFlowsWest ? Vector2.left : Vector2.right;
+                                }
+                            }
+                        }
+                    }
+                    if (acre.hasRiverEast)
+                    {
+                        centerRiverDir += acre.riverEastFlowsEast ? Vector2.right : Vector2.left;
+                        for (int y = 0; y < riverWidth; y++)
+                        {
+                            for (int x = acreSize - 1; x >= acreSize / 2; x--)
+                            {
+                                var p = new Vector2Int(pos.x + x, pos.y + acreSize / 2 - riverWidth / 2 + y);
+                                var t = tiles[p.x, p.y];
+                                if (t.isRiver)
+                                {
+                                    continue;
+                                }
+                                if (y == 0)
+                                {
+                                    t.isRiverEdge = true;
+                                    t.riverEdgeDir = new Vector2Int(0, 1);
+                                }
+                                else if (y == riverWidth - 1)
+                                {
+                                    t.isRiverEdge = true;
+                                    t.riverEdgeDir = new Vector2Int(0, -1);
+                                }
+                                else
+                                {
+                                    t.isRiver = true;
+                                    t.isRiverEdge = false;
+                                    t.riverDir = t.acre.riverEastFlowsEast ? Vector2.right : Vector2.left;
+                                }
+                            }
+                        }
+                    }
+                    if (acre.hasRiverSouth)
+                    {
+                        centerRiverDir += Vector2.down;
+                        for (int x = 0; x < riverWidth; x++)
+                        {
+                            for (int y = acreSize / 2 - 1; y < acreSize; y++)
+                            {
+                                var p = new Vector2Int(pos.x + acreSize / 2 - riverWidth / 2 + x, pos.y + y);
+                                var t = tiles[p.x, p.y];
+                                if (t.isRiver)
+                                {
+                                    continue;
+                                }
+                                if (x == 0)
+                                {
+                                    tiles[p.x, p.y].isRiverEdge = true;
+                                    tiles[p.x, p.y].riverEdgeDir = new Vector2Int(1, 0);
+                                }
+                                else if (x == riverWidth - 1)
+                                {
+                                    tiles[p.x, p.y].isRiverEdge = true;
+                                    tiles[p.x, p.y].riverEdgeDir = new Vector2Int(-1, 0);
+                                }
+                                else
+                                {
+                                    tiles[p.x, p.y].isRiver = true;
+                                    tiles[p.x, p.y].isRiverEdge = false;
+                                    tiles[p.x, p.y].riverDir = Vector2.down;
+                                }
+                            }
+                        }
+                    }
+
+                    centerRiverDir = centerRiverDir.normalized;
+                    // Fix middle tiles
+                    for (int y = 0; y < riverWidth / 2; y++)
+                    {
+                        for (int x = 0; x < riverWidth / 2; x++)
+                        {
+                            var p = new Vector2Int(pos.x + acreSize / 2 - riverWidth / 2 + 1 + x, pos.y + acreSize / 2 + 1 - riverWidth / 2 + y);
+                            var t = tiles[p.x, p.y];
+                            t.isRiverEdge = false;
+                            t.isRiver = true;
+                            t.riverDir = centerRiverDir;
+                        }
+                    }
+                }
+            }
         }
         
         private bool IsAcre(Vector2Int pos)

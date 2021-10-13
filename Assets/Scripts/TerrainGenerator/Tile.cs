@@ -23,6 +23,11 @@ namespace TerrainGenerator
     public bool isMergeCliff;
     public List<Tuple<int, CliffTile>> mergeCliffs;
 
+    public bool isRiver;
+    public bool isRiverEdge;
+    public Vector2Int riverEdgeDir;
+    public Vector2 riverDir;
+
     public bool isSlopeLowEnd;
     public bool isSlope;
     public bool isSlopeCliff;

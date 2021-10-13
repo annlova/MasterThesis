@@ -5,8 +5,9 @@ TagManager:
   serializedVersion: 2
   tags:
   - Cliff
-  - Undefined
   - Flat
+  - RiverSurface
+  - RiverBottom
   layers:
   - Default
   - TransparentFX

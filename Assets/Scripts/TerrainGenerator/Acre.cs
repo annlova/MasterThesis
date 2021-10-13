@@ -18,6 +18,14 @@ namespace TerrainGenerator
     
     public bool cliffWalked;
 
+    public bool hasRiver;
+    public bool hasRiverNorth;
+    public bool hasRiverWest;
+    public bool riverWestFlowsWest;
+    public bool hasRiverEast;
+    public bool riverEastFlowsEast;
+    public bool hasRiverSouth;
+
     public Acre(Vector2Int pos, int elevation)
     {
       this.islandIndex = -1;

@@ -63,7 +63,7 @@ Shader "Unlit/TileShader"
                 // float id = floor(i.id.x);
                 int x = int(i.p.x);
                 int y = int(i.p.y);
-                float4 tileColor = float4(i.uv.xy, 0.0f, 1.0f);//_TileValues[x + (_AcreSize * _MapHeight - 1 - y) * _AcreSize * _MapWidth];
+                float4 tileColor = _TileValues[x + (_AcreSize * _MapHeight - 1 - y) * _AcreSize * _MapWidth];
                 // sample the texture
                 float4 ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
                 float4 diffuse = tileColor * dot(i.normal, _WorldSpaceLightPos0);
