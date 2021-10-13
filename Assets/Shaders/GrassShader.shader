@@ -63,7 +63,7 @@ Shader "Unlit/GrassShader"
             struct FragmentAttributes
             {
                 float4 clipPos : POSITION;
-                float4 worldPos: TEXCOORD0;
+                float4 worldPos : TEXCOORD0;
                 float3 worldNor : TEXCOORD1;
                 float2 st : TEXCOORD2;
             };
