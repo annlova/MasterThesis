@@ -3,6 +3,7 @@
 //                        (c) 2019 Sergey Stafeyev                           //
 //===========================================================================//
 
+using System;
 using Camera;
 using UnityEngine;
 
@@ -99,7 +100,8 @@ public class FreeFlyCamera : MonoBehaviour
 
     private void Start()
     {
-
+        camera = GetComponentInParent<UnityEngine.Camera>();
+        riverRenderer = GameObject.Find("TerrainGenerator").transform.Find("RiversRender").GetComponent<Renderer>();
         _initPosition = transform.position;
         _initRotation = transform.eulerAngles;
     }
@@ -108,6 +110,16 @@ public class FreeFlyCamera : MonoBehaviour
     {
         if (_active)
             _wantedMode = CursorLockMode.Locked;
+    }
+
+    private UnityEngine.Camera camera;
+    private Renderer riverRenderer;
+    private void OnPreRender()
+    {
+        var projInv = (camera.projectionMatrix).inverse;
+        var viewInv = (camera.worldToCameraMatrix).inverse;
+        riverRenderer.sharedMaterial.SetMatrix("_ProjInverse", projInv);
+        riverRenderer.sharedMaterial.SetMatrix("_ViewInverse", viewInv);
     }
 
     // Apply requested cursor state

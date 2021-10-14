@@ -254,7 +254,7 @@ namespace TerrainGenerator
                 for (int x = 0; x < width; x++)
                 {
                     var tile = tiles[x, z];
-                    var riverOffset = tile.isRiver ? 0.5f : 0.0f;
+                    var riverOffset = tile.isRiver ? 1.5f : 0.0f;
                     if (tile.isCliff)
                     {
                         Vector3 p = Vector3.zero;
