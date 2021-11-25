@@ -8,6 +8,7 @@ namespace TerrainGenerator
   {
     public GameObject prefab;
     public GameObject prefabRoof;
+    public GameObject prefabBeach;
     public CliffTileRule[] rules;
     public CliffOverlap[] overlaps;
     public bool isEndTile;

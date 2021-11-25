@@ -23,6 +23,7 @@ Shader "Unlit/TileShader"
             {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
+                float2 d : TEXCOORD2;
                 float4 normal : NORMAL;
             };
 
@@ -34,6 +35,7 @@ Shader "Unlit/TileShader"
                 float4 p : TEXCOORD0;
                 float4 normal : TEXCOORD1;
                 float2 uv : TEXCOORD2;
+                float2 d : TEXCOORD3;
             };
 
             StructuredBuffer<float4> _TileValues;
@@ -55,6 +57,7 @@ Shader "Unlit/TileShader"
                 // o.id = x + z * (16 * 6 + 1);
                 o.normal = v.normal;
                 o.uv = v.uv;
+                o.d = v.d;
                 return o;
             }
 
@@ -64,6 +67,11 @@ Shader "Unlit/TileShader"
                 int x = int(i.p.x);
                 int y = int(i.p.y);
                 float4 tileColor = _TileValues[x + (_AcreSize * _MapHeight - 1 - y) * _AcreSize * _MapWidth];
+                // float s = (sin(i.d.y * frac(_Time.y) * 3.14 * 4) + 1) / 2;
+                // if (abs(s - i.d.x) < 0.2f)
+                // {
+                //     tileColor = float4(0.0f, 1.0f, 0.0f, 1.0f);
+                // }
                 // sample the texture
                 float4 ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
                 float4 diffuse = tileColor * dot(i.normal, _WorldSpaceLightPos0);

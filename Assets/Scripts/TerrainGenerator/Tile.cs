@@ -13,6 +13,7 @@ namespace TerrainGenerator
     public bool isLeveled;
     
     public bool isCliff;
+    public bool isBeachCliff;
     public CliffTile cliffTile;
     public List<Tile> connectedCliffs;
 
@@ -28,6 +29,14 @@ namespace TerrainGenerator
     public Vector2Int riverEdgeDir;
     public Vector2 riverDir;
 
+    public float riverLineFactor;
+    public float[] vertexRiverLineFactor;
+    public float riverValue;
+    public int riverValueCliff;
+    public int riverValueLine;
+    public float[] vertexRiverValue;
+    public bool riverValueLineVisited;
+
     public bool isSlopeLowEnd;
     public bool isSlope;
     public bool isSlopeCliff;
@@ -37,6 +46,8 @@ namespace TerrainGenerator
     public bool isSlopeHigher;
     public int slopeFactor;
 
+    public bool isBeach;
+    
     public bool modified;
     
     public Tile(Vector2Int pos, Acre acre, int elevation)
@@ -46,6 +57,7 @@ namespace TerrainGenerator
       this.elevation = elevation;
 
       isCliff = false;
+      isBeachCliff = false;
       cliffTile = null;
       connectedCliffs = new List<Tile>();
       
@@ -56,6 +68,12 @@ namespace TerrainGenerator
       isMergeCliff = false;
       mergeCliffs = new List<Tuple<int, CliffTile>>();
 
+      riverValueLine = -1;
+      vertexRiverValue = new float[4];
+      vertexRiverLineFactor = new float[4];
+
+      isBeach = false;
+      
       isLeveled = false;
 
       modified = false;

@@ -8,6 +8,9 @@ TagManager:
   - Flat
   - RiverSurface
   - RiverBottom
+  - BeachCliff
+  - Beach
+  - Ocean
   layers:
   - Default
   - TransparentFX

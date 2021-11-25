@@ -22,6 +22,7 @@ namespace TerrainGenerator
 
     private readonly CliffTile[] cliffTiles;
     private readonly int maxCliffEat;
+    private readonly int minCliffEat;
     private readonly int cliffElevation;
     
     private Vector2Int pos;
@@ -34,11 +35,15 @@ namespace TerrainGenerator
     private bool done;
 
     private bool notWalkedStartAcre;
+
+    private readonly int maxCliffWalkReverts;
+    private int numReverts;
     
     public WalkAgent(Tile[,] tiles, int width, int height,
                      Acre[,] acres, Acre startAcre, int acreSize,
-                     CliffTile[] cliffTiles, int maxCliffEat,
-                     Vector2Int pos, Vector2Int forward, Vector2Int right)
+                     CliffTile[] cliffTiles, int maxCliffEat, int minCliffEat,
+                     Vector2Int pos, Vector2Int forward, Vector2Int right,
+                     int maxCliffWalkReverts)
     {
       this.tiles = tiles;
       this.width = width;
@@ -50,6 +55,7 @@ namespace TerrainGenerator
 
       this.cliffTiles = cliffTiles;
       this.maxCliffEat = maxCliffEat;
+      this.minCliffEat = minCliffEat;
       cliffElevation = startAcre.elevation;
 
       this.pos = pos;
@@ -62,6 +68,9 @@ namespace TerrainGenerator
       done = false;
 
       notWalkedStartAcre = tiles[pos.x, pos.y].acre != startAcre;
+
+      this.maxCliffWalkReverts = maxCliffWalkReverts;
+      numReverts = 0;
     }
 
     public void Step()
@@ -107,9 +116,12 @@ namespace TerrainGenerator
           tries++;
 
           trialPos = pos + rule.offset;
-          var trialTile = tiles[trialPos.x, trialPos.y];
+          if (!IsOutsideMap(trialPos))
+          {
+            var trialTile = tiles[trialPos.x, trialPos.y];
+            ruleFound = IsValidTile(trialTile);
+          }
 
-          ruleFound = IsValidTile(trialTile);
           if (ruleFound)
           {
             // Check if done (cliff collision)
@@ -201,10 +213,15 @@ namespace TerrainGenerator
           // No valid rule was found, revert to previous step
           // Unapply the step
           steps.Pop().unapply();
+          numReverts++;
 
-          if (steps.Count == 0)
+          if (numReverts >= maxCliffWalkReverts)
           {
-            throw new Exception("No valid cliff walking solution found.");
+            throw new Exception("No valid cliff walking solution found (MaxCliffWalkReverts).");
+          }
+          else if (steps.Count == 0)
+          {
+            throw new Exception("No valid cliff walking solution found (Steps.Count).");
           }
         }
       }
@@ -317,7 +334,7 @@ namespace TerrainGenerator
       bool valid = true;
       
       valid &= tile.acre.elevation >= cliffElevation; // Valid acre check
-      valid &= IsOutsideAcre(tile, right * maxCliffEat);
+      valid &= IsOutsideAcre(tile, right * maxCliffEat) && !IsOutsideAcre(tile, right * minCliffEat);
       
       return valid;
     }
@@ -351,13 +368,13 @@ namespace TerrainGenerator
       
       if (forward == new Vector2Int(0, 1) && acre.hasSouthCliff)
       {
-        if (p.y >= acreSize - 1)
+        if (p.y >= acreSize - 1 - minCliffEat)
         {
           return ComputeDirectionChange(Vector2Int.right);
         }
         else if (p.y >= acreSize - maxCliffEat)
         {
-          if (Random.Range(0, maxCliffEat) == 0)
+          if (Random.Range(0, maxCliffEat - minCliffEat) == 0)
           {
             return ComputeDirectionChange(Vector2Int.right);
           }
@@ -365,13 +382,13 @@ namespace TerrainGenerator
       } 
       else if (forward == Vector2Int.right && acre.hasEastCliff)
       {
-        if (p.x >= acreSize - 1)
+        if (p.x >= acreSize - 1 - minCliffEat)
         {
           return ComputeDirectionChange(new Vector2Int(0, -1));
         } 
         else if (p.x >= acreSize - maxCliffEat)
         {
-          if (Random.Range(0, maxCliffEat) == 0)
+          if (Random.Range(0, maxCliffEat - minCliffEat) == 0)
           {
             return ComputeDirectionChange(new Vector2Int(0, -1));
           }
@@ -475,6 +492,10 @@ namespace TerrainGenerator
         
         tile.cliffTile = cliffTile;
         tile.isCliff = true;
+        if (elevation == 0)
+        {
+          tile.isBeachCliff = true;
+        }
         tile.elevation = elevation;
         if (setCliffWalked)
         {
@@ -498,6 +519,7 @@ namespace TerrainGenerator
         
         tile.cliffTile = null;
         tile.isCliff = false;
+        tile.isBeachCliff = false;
         tile.elevation = tile.acre.elevation;
         if (setCliffWalked)
         {

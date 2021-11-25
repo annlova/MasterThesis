@@ -24,7 +24,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _CalmWaveTex:
-        m_Texture: {fileID: 2800000, guid: 8a3bdf2ae0f584c478b0701f3a345ce8, type: 3}
+        m_Texture: {fileID: 2800000, guid: fbfff95c21efb614c84d29beeb96564e, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _CalmWaveTex2:
@@ -53,6 +53,10 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
         m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalTex:
+        m_Texture: {fileID: 2800000, guid: c4aa5d6e0d0e3cf4ca97b62a545b49f6, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
