@@ -72,7 +72,7 @@ Shader "Unlit/WaterShader"
                 float3 displacement = tex2D(_WaveDisplacementTex, input.st + timeFactor);
 
                 float2 scrolledSt = float2(input.st.x + timeFactor, input.st.y - timeFactor);
-                float2 displacedSt = getDisplacementVector(displacement, displacementFactor) + scrolledSt;
+                float2 displacedSt = scrolledSt + getDisplacementVector(displacement, displacementFactor);
                 
                 
                 float3 color = getColor(displacedSt);

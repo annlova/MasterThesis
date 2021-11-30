@@ -108,28 +108,28 @@ Shader "Unlit/FurShader"
 
             float4 frag (FragmentAttributes input) : SV_Target
             {
+                /// Sample from textures //
                 float3 bottom = tex2D(_BottomTexture, input.st);
                 float3 fur = tex2D(_FurTexture, input.st);
                 float3 outmostFur = tex2D(_OutmostLayerTexture, input.st);
                 float3 mask = tex2D(_MaskTexture, input.st);
+                ///
 
+                /// For clamping color //
                 float4 zeroVec = float4(0.0f, 0.0f, 0.0f, 0.0f);
                 float4 oneVec = float4(1.0f, 1.0f, 1.0f, 1.0f);
+                ///
                 
                 float windFactor = calcWindFactor(input.st);
                 float2 furPlanePos = textureToFurCoords(input.st, windFactor);
-
                 
                 float alpha = genAlpha(furPlanePos, mask);
 
                 float3 color = (ambient() + diffuse(input.worldNor,
                     normalize(_WorldSpaceCameraPos - input.worldPos),
                     mask)) * getColor(input.st, bottom, fur, outmostFur);
-                // color *= 0.5f + layerFactor() * 0.5f;
                 
-                //color += windFactor;
-                
-                /// To make sure color is between 0 and 1.
+                // To make sure color is between 0 and 1
                 color = clamp(color, zeroVec, oneVec);
 
                 return float4(color, alpha);

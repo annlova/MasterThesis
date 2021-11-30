@@ -5,7 +5,10 @@ Shader "Unlit/CalmWaterShader"
         _CalmWaveTex ("Calm wave texture 1", 2D) = "white" {}
         _CalmWaveTex2 ("Calm Wave texture 2", 2D) = "white" {}
         _WaveDisplacementTex ("Displacement texture for calm waves", 2D) = "white" {}
-        _NormalTex ("Water Normals", 2D) = "white" {}
+        _WaterTex ("Texture for water (color mainly) 1", 2D) = "white" {}
+        _WaterTex2 ("Texture for water (color mainly) 2", 2D) = "white" {}
+        _GlitterTex ("Texture for water glitter", 2D) = "white" {}
+        _GlitterTex2 ("Texture for water glitter", 2D) = "white" {}
         
         _LightColor ("Color of light", Vector) = (1.0, 1.0, 1.0, 1.0)
     }
@@ -27,18 +30,16 @@ Shader "Unlit/CalmWaterShader"
             float2 getDisplacementVector(float3 displacement, float displacementFactor);
             float3 ambient();
             float3 diffuse(float3 normal);
-            float computeAlpha(float value, float high, float low);
-
-            float rando(float2 x);
-            float snoiseNormalized(float2 v);
+            float computeAlpha(float value, float distance, float higherThreshold, float lowerThreshold);
+            float computeGlitterIntensity(float3 glitterProperties);
+            float nsin(float rad);
+            float random2 (float2 st);
 
             struct VertexAttributes
             {
                 float4 pos : POSITION;
-                float3 nor : NORMAL;
                 float2 uv : TEXCOORD0;
                 float2 dir : TEXCOORD1;
-                float4 tan : TANGENT;
             };
 
             struct FragmentAttributes
@@ -46,18 +47,23 @@ Shader "Unlit/CalmWaterShader"
                 float4 clipPos : POSITION;
                 float4 worldPos : TEXCOORD0;
                 float2 st : TEXCOORD1;
-                float4 screenPos : TEXCOORD2;
-                float2 dir : TEXCOORD3;
-                float3x3 tbn : MATRIX;
+                float2 dir : TEXCOORD2;
+                float4 screenPos : TEXCOORD3;
             };
 
             sampler2D _CalmWaveTex;
             sampler2D _CalmWaveTex2;
             sampler2D _WaveDisplacementTex;
+            sampler2D _WaterTex;
+            sampler2D _WaterTex2;
+            sampler2D _GlitterTex;
+            
             sampler2D _CameraDepthTexture;
-            sampler2D _NormalTex;
 
             float4 _LightColor;
+
+            float4x4 _ProjInverse;
+            float4x4 _ViewInverse;
 
             FragmentAttributes vert (VertexAttributes input)
             {
@@ -71,23 +77,11 @@ Shader "Unlit/CalmWaterShader"
                 
                 output.st = input.uv;
                 output.dir = input.dir;
-                
-                output.screenPos = ComputeScreenPos(output.clipPos);
 
-                float3 tangent = input.tan.xyz * input.tan.w;
-                float3 bitangent = cross(input.nor, input.tan.xyz) * input.tan.w;
-                float3 normal = input.nor;
-                
-                float3 T = normalize(float3(UnityObjectToWorldDir(tangent)));
-                float3 B = normalize(float3(UnityObjectToWorldDir(bitangent)));
-                float3 N = normalize(float3(UnityObjectToWorldDir(normal)));
-                output.tbn = float3x3(T, B, N);
+                output.screenPos = ComputeScreenPos(output.clipPos);
                 
                 return output;
             }
-
-            float4x4 _ProjInverse;
-            float4x4 _ViewInverse;
 
             float3 WorldPosFromDepth(float2 uv, float depth) {
                 float z = depth * 2.0 - 1.0;
@@ -102,71 +96,121 @@ Shader "Unlit/CalmWaterShader"
 
                 return worldSpacePosition.xyz;
             }
-            
+
             float4 frag (FragmentAttributes input) : SV_Target
             {
+                /// To calculate depth //
                 float2 uv = input.screenPos.xy / input.screenPos.w;
                 float depth = 1.0f - SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, uv);
-                
-				float3 world = WorldPosFromDepth(uv, depth);
+                                
+                float3 world = WorldPosFromDepth(uv, depth);
                 float d = distance(input.worldPos, world);
+                ///
                 
-                // Change for faster scrolling
+                /// Change for more aggressive displacement //
+                float displacementFactor = 0.1f;//0.03f;
+                float displacementFactorWhite = 0.015f;//0.03f;
+                float displacementFactorGlitter = 0.03f;
+                ///
+
+                /// Change for faster scrolling //
                 float timeFactor = _Time.y / 10;
+                ///
 
-                float2 scrolledStTex1St = float2(input.st.x + timeFactor, input.st.y - timeFactor);
-                float2 scrolledStTex2St = float2(input.st.x + timeFactor / 3, input.st.y + timeFactor);
+                /// Scrolling texture thresholds //
+                float higherThresholdWaves = 0.75f;//1.0f;
+                float lowerThresholdWaves = 0.68f;
+                ///
 
-                float2 abc1 = fmod(input.worldPos.xz + float2(timeFactor, -timeFactor), 10.0f) / 10.0f;
-                float2 abc2 = fmod(input.worldPos.xz + float2(timeFactor / 3.0f, timeFactor), 10.0f) / 10.0f;
+                /// Calculate displacement with displacement texture //
+                float3 displacement = tex2D(_WaveDisplacementTex, input.st * .1 + timeFactor* 0.5);
+                ///
+
+                /// Get scrolled and displaced wave texture coordinates //
+                float2 scrolledStTex1 = fmod(input.worldPos.xz / 1.5f + float2(timeFactor, -timeFactor),
+                    10.0f) / 10.0f + input.dir * float2(-1.0f, -1.0f) * timeFactor * (-0.55);
+                float2 displacedStTex1 =  scrolledStTex1 + getDisplacementVector(displacement, displacementFactorWhite);
+                float2 scrolledStTex2 = fmod(input.worldPos.xz / 1.5f + float2(timeFactor / 3.0f, timeFactor),
+                    10.0f) / 10.0f + input.dir * float2(-1.0f, -1.0f) * timeFactor * (0.9);
+                float2 displacedStTex2 =  scrolledStTex2 + getDisplacementVector(displacement, displacementFactorWhite);
+                ///
+
+                /// Get scrolled and displaced water texture coordinates//
+                //TODO FIX WATER DIRECTION MISSTAKE HERE 
+                float2 displacedStWaterTex1 =  scrolledStTex2 + getDisplacementVector(displacement, displacementFactor);
+                float2 displacedStWaterTex2 =  scrolledStTex1 + getDisplacementVector(displacement, displacementFactor);
+                //
+
+                float2 glitterSt = float2(0, 0);
+                float glitterIndex = floor(fmod(_Time.z*10, 40));
+                glitterSt.x = fmod(glitterIndex, 8);
+                glitterSt.y = floor(glitterIndex / 8);
+                glitterSt /= 8;
+
+                float2 flooredWorldPos = floor(input.worldPos.xz);
+                float2 glitterPos = float2(random2(flooredWorldPos), random2(flooredWorldPos * 300.2));
+                // float2 glitterPos = float2(0.0f, frac(_Time.y));
+                float2 glitterPosSt = (input.st - glitterPos) * 5.0f;
+                // glitterPosSt *= step(float2(0.0f, 0.0f), glitterPosSt) * step(glitterPosSt, float2(1.0f, 1.0f));
+                glitterPosSt.x *= step(0.0f, glitterPosSt.x) * step(glitterPosSt.x, 1.0f);
+                glitterPosSt.y *= step(0.0f, glitterPosSt.y) * step(glitterPosSt.y, 1.0f);
+                glitterSt += glitterPosSt / 8;
+
+                // glitterSt += input.st / 8;
+                glitterSt.y = 1.0 - glitterSt.y;
+                /// Get glitter texture coordinates //
+                float2 displacedStGlitterTex = glitterSt;
+                ///
+
+                /// Sample from textures //
+                float3 tex1Color = tex2D(_CalmWaveTex, displacedStTex1 / 2.0f);
+                float3 tex2Color = tex2D(_CalmWaveTex2, displacedStTex2 / 2.0f);
                 
-                float3 tex1Color = tex2D(_CalmWaveTex, abc1);
-                float3 tex2Color = tex2D(_CalmWaveTex2, abc2);
+                float3 waterColor = tex2D(_WaterTex, input.st) * (clamp(1.0 - d * 0.5, 0.0f, 1.0f) / 3 + 0.5); // reverse depth colors
+                // float3 waterColor = tex2D(_WaterTex, displacedStWaterTex1) * clamp(d, 0.5f, 1.0f);
+                float3 waterColor2 = tex2D(_WaterTex2, displacedStWaterTex2) * clamp(d, 0.5f, 1.0f);
+                ///
 
-                float3 outColor = tex1Color + tex2Color;
-                float alpha = computeAlpha(outColor.r, 0.75f, 0.7f);
-                alpha = step(0.1f, alpha);
+                float3 glitterProperties = tex2D(_GlitterTex, displacedStGlitterTex);
                 
-                float3 normal = tex2D(_NormalTex, input.st + _Time.x * input.dir * float2(1.0f, -1.0f)).xyz;
-                float3 normal2 = tex2D(_NormalTex, input.st * 3.65f + _Time.x * input.dir * float2(1.0f, -1.0f)).xyz;
-                normal = (normal + normal2) - 1.0;
-                // normal = float3(normal.x, normal.z, normal.y);
-                normal = normalize(mul(input.tbn, normal));
+                float glitterIntensity = computeGlitterIntensity(glitterProperties);
+                int isGlitter = step(0.0f, glitterIntensity);
                 
-                float3 cameraDir = normalize(_WorldSpaceCameraPos - input.worldPos.xyz);
-                float fresnel = dot(normal, cameraDir);
-                fresnel = smoothstep(0.4f, 0.6f, fresnel);
-                // sample the default reflection cubemap, using the reflection vector
-                float4 skyData = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, cameraDir);
-                // decode cubemap data into actual color
-                float3 skyColor = DecodeHDR (skyData, unity_SpecCube0_HDR);
-                skyColor *= 0.7f;
+                waterColor = lerp(waterColor, waterColor2, d * 0.3f); // Interpolate water textures
+
+                float3 outColor = tex1Color + tex2Color; // Add together wave textures
                 
-                float is = step(d, 1.0f);
-                float falloff = 1.0f - smoothstep(0.0f, 1.0f, d);
-				float3 color = float3(0.3f, 0.4f, 1.0f) * d;
-				float3 white = float(1.0f).rrr;
-                float n = snoiseNormalized(input.worldPos.xz * 5.0 + -input.dir * _Time.y);
-                n = step(0.5f, n);
-                // is *= n;
+                float alpha = computeAlpha(outColor.r, clamp(d, 0.0f, 1.0f), higherThresholdWaves, lowerThresholdWaves); // Compute alpha for waves
+                
+                outColor = float3(1.0f, 1.0f, 1.0f); // Make white
+                
+                // float mixFactor = 0.035f - abs(alpha - 0.715f);
+                
+                // outColor = lerp(waterColor, outColor, smoothstep(0.68f, 0.75f, alpha) * lerp(1,0.2, clamp(d*0.45, 0,1)));
+                outColor = lerp(waterColor, outColor, smoothstep(0.68f, 0.75f, alpha) * 0.25); // Change smoothstep to change wave color intensity
 
-                float a = computeAlpha(outColor.r, 0.75 + 0.25 * falloff, 0.7 - 0.7 * falloff);
-                float3 w = float3(1.0f, 1.0f, 1.0f) * (a * is + alpha * (1.0f - is));
-                float3 c = skyColor + w * 0.7f;
-                c = clamp(c, (0.0f).xxx, (1.0f).xxx);
+                int isWater = step(alpha, 0.01f);
 
-                float3 tempCol = lerp(float3(0.0f, 0.0f, 0.0f) * falloff, skyColor, 1.0f - fresnel);
-                // outColor = lerp(tempCol, outColor, );
-                float3 water = lerp(lerp(tempCol, outColor, alpha), tempCol, step(fresnel, 0.6f));
+                // float specularStrength = 1000.0f;
+                // float spec = pow(max(displacement.r+0.2, 0.0f), 32);
+                // float3 specular = specularStrength * spec * (1.0f).xxx;
+                // specular = clamp(0.0f, 1.0f, specular);
+                
+                return float4(outColor * min((1 - isWater) + (1- isGlitter), 1)
+                    + waterColor * min((isWater) + (1- isGlitter), 1)
+                    + float3(glitterIntensity, glitterIntensity, glitterIntensity) * isGlitter
+                    , 1);
+                // return float4(specular, 1.0f);
+            }
 
-                float specularStrength = 1.0f;
-                float3 reflectDir = reflect(_WorldSpaceLightPos0, normal);
-                float spec = pow(max(dot(-cameraDir, reflectDir), 0.0f), 64);
-                float3 specular = specularStrength * spec * (1.0f).xxx;
-                return float4(tempCol + specular, (alpha + 1.0 - falloff) * 0.1f + 0.9f);
-                // return float4(water, (alpha + 1.0 - falloff) * 0.1f + 0.9f);
-                float isWhite = step(0.1f, alpha);
-                return float4(white * isWhite + color * (1.0f - isWhite), 1.0f);
+            /**
+             * Returns displacement direction
+             */
+            float2 getDisplacementVector(float3 displacement, float displacementFactor)
+            {
+                float2 displacementVector = float2(displacement.r, displacementFactor) * displacementFactor * 2 - 1;
+
+                return displacementVector;
             }
             
             float3 ambient()
@@ -179,38 +223,67 @@ Shader "Unlit/CalmWaterShader"
                 return _LightColor.rgb * dot(_WorldSpaceLightPos0, normal);
             }
 
-            float computeAlpha(float value, float high, float low)
+            float computeAlpha(float value, float distance, float higherThreshold, float lowerThreshold)
             {
-                float higherThreshold = high;
                 // Makes values <= higherThreshold visible
+                //int isOpaque1 = step(value, higherThreshold - distance * 0.25);
                 int isOpaque1 = step(value, higherThreshold);
 
-                float lowerThreshold = low;
                 // Makes values >= lowerThreshold visible
                 int isOpaque2 = step(lowerThreshold, value);
-
                 
                 return value * isOpaque1 * isOpaque2;
             }
 
-            uint baseHash(uint2 p)
+            float computeGlitterIntensity(float3 glitterProperties)
             {
-                p = 1103515245U*((p >> 1U)^(p.yx));
-                uint h32 = 1103515245U*((p.x)^(p.y>>3U));
-                return h32^(h32 >> 16);
+                //float isVisible1 = step(frac(_Time.y), glitterProperties.g * 10); // High threshold
+                //float isVisible2 = step((glitterProperties.g / 20), frac(_Time.y)); // Low threshold
+
+                return glitterProperties.r; //* isVisible1 * isVisible2;
             }
 
-            float rando(float2 x)
+            float glitterAnimation(float start, float length, float time)
             {
-                uint n = baseHash(asuint(x));
-                uint4 rz = uint4(n, n*16807U, n*48271U, n*69621U);
-                return float4((rz >> 1) & uint4((0x7fffffffU).xxxx))/float(0x7fffffff).x;
+                
             }
+
+            /*
+            float nsin(float rad)
+            {
+                return (sin(rad) + 1) / 2;
+            }
+
+            float sin90(float x)
+            {
+                return frac(x);
+            }
+            */
+            
             
             // Some useful functions
             float3 mod289(float3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
             float2 mod289(float2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
             float3 permute(float3 x) { return mod289(((x*34.0)+1.0)*x); }
+
+            uint baseHash(uint2 p)
+            {
+                p = 1103515245U * ((p >> 1U)^(p.yx));
+                uint h32 = 1103515245U * ((p.x)^(p.y>>3U));
+                return h32^(h32 >> 16);
+            }
+
+            float4 hash42(float2 x)
+            {
+                uint n = baseHash(asuint(x));
+                uint4 rz = uint4(n, n * 16807U, n * 48271U, n * 69621U);
+                return float4((rz >> 1) & uint4((0x7fffffffU).xxxx))/float(0x7fffffff);
+            }
+            ///
+
+            float random2(float2 st) {
+                return hash42(st).x;
+            }
             
             float snoise(float2 v) {
 

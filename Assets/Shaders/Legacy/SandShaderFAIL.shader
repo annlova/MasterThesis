@@ -1,10 +1,12 @@
-Shader "Unlit/WaterFallShader"
+Shader "Unlit/SandShader"
 {
     Properties
     {
-        _FlowTex ("Water flow texture", 2D) = "white" {}
-        _ColorTex ("Water color/pattern texture", 2D) = "white" {}
-        _FlowDisplacementTex ("Displacement texture for water flow", 2D) = "white" {}
+        _SandWaveTex ("Calm wave texture 1 for shape", 2D) = "white" {}
+        _SandWaveTex2 ("Calm Wave texture 2 for shape", 2D) = "white" {}
+        _WaveDisplacementTex ("Displacement texture for sand waves", 2D) = "white" {}
+        _BackgroundTex ("Background sand texture", 2D) = "white" {}
+        _WaveTex ("material/Color of sand wave", 2D) = "white" {}
         
         _LightColor ("Color of light", Vector) = (1.0, 1.0, 1.0, 1.0)
     }
@@ -22,15 +24,18 @@ Shader "Unlit/WaterFallShader"
             #include "UnityCG.cginc"
             #include "UnityShaderVariables.cginc"
 
-            float4 getColor(float2 st);
+            float3 getColor(float2 st);
             float2 getDisplacementVector(float3 displacement, float displacementFactor);
             float3 ambient();
             float3 diffuse(float3 normal);
+            float computeAlpha(float value, float higherThreshold, float lowerThreshold);
+            float random2 (float2 st);
 
             struct VertexAttributes
             {
                 float4 pos : POSITION;
                 float2 uv : TEXCOORD0;
+                float2 dir : TEXCOORD1;
             };
 
             struct FragmentAttributes
@@ -38,13 +43,20 @@ Shader "Unlit/WaterFallShader"
                 float4 clipPos : POSITION;
                 float4 worldPos : TEXCOORD0;
                 float2 st : TEXCOORD1;
+                float2 dir : TEXCOORD2;
+                float4 screenPos : TEXCOORD3;
             };
 
-            sampler2D _FlowTex;
-            sampler2D _ColorTex;
-            sampler2D _FlowDisplacementTex;
+            sampler2D _SandWaveTex;
+            sampler2D _SandWaveTex2;
+            sampler2D _WaveDisplacementTex;
+            sampler2D _BackgroundTex;
+            sampler2D _WaveTex;
 
             float4 _LightColor;
+
+            float4x4 _ProjInverse;
+            float4x4 _ViewInverse;
 
             FragmentAttributes vert (VertexAttributes input)
             {
@@ -57,6 +69,9 @@ Shader "Unlit/WaterFallShader"
                 output.clipPos = UnityObjectToClipPos(modelPos);
                 
                 output.st = input.uv;
+                output.dir = input.dir;
+
+                output.screenPos = ComputeScreenPos(output.clipPos);
                 
                 return output;
             }
@@ -64,33 +79,52 @@ Shader "Unlit/WaterFallShader"
             float4 frag (FragmentAttributes input) : SV_Target
             {
                 
-                // Change for more aggressive displacement
-                float displacementFactor = 0.1f;
+                /// Change for more aggressive displacement //
+                float displacementFactor = 0.1f;//0.03f;
+                float displacementFactorWhite = 0.015f;//0.03f;
+                ///
 
-                // Change for faster scrolling. (Same for both texture and displacement)
-                float timeFactor = _Time.y / 10;
-                
-                float3 displacement = tex2D(_FlowDisplacementTex, float2(input.st.x, input.st.y + timeFactor * 15));
+                /// Scrolling texture thresholds //
+                float higherThresholdWaves = 0.75f;//1.0f;
+                float lowerThresholdWaves = 0.68f;
+                ///
 
-                // float2 scrolledSt = float2(input.st.x + timeFactor, input.st.y - timeFactor);
-                float2 scrolledSt = float2(input.st.x, input.st.y + timeFactor * 4);
-                float2 displacedSt = getDisplacementVector(displacement, displacementFactor) + scrolledSt;
+                /// Calculate displacement with displacement texture //
+                float3 displacement = tex2D(_WaveDisplacementTex, input.st);
+                ///
+
+                /// Get displaced wave texture coordinates //
+                float2 displacedStTex1 =  input.st + getDisplacementVector(displacement, displacementFactorWhite);
+                float2 displacedStTex2 =  input.st + getDisplacementVector(displacement, displacementFactorWhite);
+                ///
+
+                /// Sample from textures //
+                float3 waveTex1 = tex2D(_SandWaveTex, displacedStTex1);
+                float3 waveTex2 = tex2D(_SandWaveTex2, displacedStTex2);
+                float3 backgroundColor = float3(0.97, 0.90, 0.66);//tex2D(_BackgroundTex, input.st);
+                float3 waveColor = tex2D(_WaveTex, input.st);
+
+                float3 wave = waveTex1 + waveTex2; // Add together wave textures
                 
-                float4 baseColor = tex2D(_ColorTex, displacedSt * 0.5);
-                float4 flowColor = tex2D(_FlowTex, displacedSt * 0.8);
-                float4 outColor = float4(flowColor.xyz * flowColor.w + baseColor.xyz, 1.0f);
-            
-                return outColor;
+                float alpha = computeAlpha(wave.r, higherThresholdWaves, lowerThresholdWaves); // Compute alpha for waves
+                
+                //outColor = float3(1.0f, 1.0f, 1.0f); // Make white
+
+                int isWater = step(alpha, 0.01f);
+
+                float3 outColor = (1 - isWater) * waveColor + backgroundColor;
+                
+                return float4(outColor, 1);
             }
 
+            /**
+             * Returns displacement direction
+             */
             float2 getDisplacementVector(float3 displacement, float displacementFactor)
             {
-                float2 displacementVector = float2(displacement.r, displacement.r) * displacementFactor * 2 - 1;
+                float2 displacementVector = float2(displacement.r, displacementFactor) * displacementFactor * 2 - 1;
 
                 return displacementVector;
-                //float2 displacedSt = st + displacementVector;
-                
-                //return displacedSt;
             }
             
             float3 ambient()
@@ -103,10 +137,40 @@ Shader "Unlit/WaterFallShader"
                 return _LightColor.rgb * dot(_WorldSpaceLightPos0, normal);
             }
 
+            float computeAlpha(float value, float higherThreshold, float lowerThreshold)
+            {
+                // Makes values <= higherThreshold visible
+                int isOpaque1 = step(value, higherThreshold);
+
+                // Makes values >= lowerThreshold visible
+                int isOpaque2 = step(lowerThreshold, value);
+                
+                return value * isOpaque1 * isOpaque2;
+            }
+            
             // Some useful functions
             float3 mod289(float3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
             float2 mod289(float2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
             float3 permute(float3 x) { return mod289(((x*34.0)+1.0)*x); }
+
+            uint baseHash(uint2 p)
+            {
+                p = 1103515245U * ((p >> 1U)^(p.yx));
+                uint h32 = 1103515245U * ((p.x)^(p.y>>3U));
+                return h32^(h32 >> 16);
+            }
+
+            float4 hash42(float2 x)
+            {
+                uint n = baseHash(asuint(x));
+                uint4 rz = uint4(n, n * 16807U, n * 48271U, n * 69621U);
+                return float4((rz >> 1) & uint4((0x7fffffffU).xxxx))/float(0x7fffffff);
+            }
+            ///
+
+            float random2(float2 st) {
+                return hash42(st).x;
+            }
             
             float snoise(float2 v) {
 

@@ -1,10 +1,10 @@
-Shader "Unlit/WaterFallShader"
+Shader "Unlit/RiverWaterShader"
 {
     Properties
     {
-        _FlowTex ("Water flow texture", 2D) = "white" {}
-        _ColorTex ("Water color/pattern texture", 2D) = "white" {}
-        _FlowDisplacementTex ("Displacement texture for water flow", 2D) = "white" {}
+        _CalmWaveTex ("Calm wave texture 1", 2D) = "white" {}
+        _CalmWaveTex2 ("Calm Wave texture 2", 2D) = "white" {}
+        _WaveDisplacementTex ("Displacement texture for calm waves", 2D) = "white" {}
         
         _LightColor ("Color of light", Vector) = (1.0, 1.0, 1.0, 1.0)
     }
@@ -22,7 +22,7 @@ Shader "Unlit/WaterFallShader"
             #include "UnityCG.cginc"
             #include "UnityShaderVariables.cginc"
 
-            float4 getColor(float2 st);
+            float3 getColor(float2 st);
             float2 getDisplacementVector(float3 displacement, float displacementFactor);
             float3 ambient();
             float3 diffuse(float3 normal);
@@ -40,9 +40,9 @@ Shader "Unlit/WaterFallShader"
                 float2 st : TEXCOORD1;
             };
 
-            sampler2D _FlowTex;
-            sampler2D _ColorTex;
-            sampler2D _FlowDisplacementTex;
+            sampler2D _CalmWaveTex;
+            sampler2D _CalmWaveTex2;
+            sampler2D _WaveDisplacementTex;
 
             float4 _LightColor;
 
@@ -63,24 +63,28 @@ Shader "Unlit/WaterFallShader"
 
             float4 frag (FragmentAttributes input) : SV_Target
             {
-                
                 // Change for more aggressive displacement
-                float displacementFactor = 0.1f;
+                float displacementFactor = 0.05f;
 
                 // Change for faster scrolling. (Same for both texture and displacement)
                 float timeFactor = _Time.y / 10;
                 
-                float3 displacement = tex2D(_FlowDisplacementTex, float2(input.st.x, input.st.y + timeFactor * 15));
+                float3 displacement = tex2D(_WaveDisplacementTex, input.st + timeFactor);
 
-                // float2 scrolledSt = float2(input.st.x + timeFactor, input.st.y - timeFactor);
-                float2 scrolledSt = float2(input.st.x, input.st.y + timeFactor * 4);
+                float2 scrolledSt = float2(input.st.x + timeFactor, input.st.y - timeFactor);
                 float2 displacedSt = getDisplacementVector(displacement, displacementFactor) + scrolledSt;
                 
-                float4 baseColor = tex2D(_ColorTex, displacedSt * 0.5);
-                float4 flowColor = tex2D(_FlowTex, displacedSt * 0.8);
-                float4 outColor = float4(flowColor.xyz * flowColor.w + baseColor.xyz, 1.0f);
+                
+                float3 color = getColor(displacedSt);
             
-                return outColor;
+                return float4(color, 1);
+            }
+
+            float3 getColor(float2 st)
+            {
+                float3 test = tex2D(_CalmWaveTex, st);
+
+                return test;
             }
 
             float2 getDisplacementVector(float3 displacement, float displacementFactor)

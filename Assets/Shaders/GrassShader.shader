@@ -107,27 +107,24 @@ Shader "Unlit/GrassShader"
 
             float4 frag (FragmentAttributes input) : SV_Target
             {
+                float3 mask = tex2D(_MaskTexture, input.st);
+
+                /// For clamping color //
                 float4 zeroVec = float4(0.0f, 0.0f, 0.0f, 0.0f);
                 float4 oneVec = float4(1.0f, 1.0f, 1.0f, 1.0f);
+                ///
                 
-                float2 worldPlanePos = input.worldPos.xz;
+                float2 worldPlanePos = input.worldPos.xz; // For seamless wind over entire map
                 float windFactor = calcWindFactor(worldPlanePos);
                 float2 grassPlanePos = worldToGrassPlanePos(worldPlanePos, windFactor);
+                
                 float alpha = genAlpha(grassPlanePos);
-
-                float3 mask = tex2D(_MaskTexture, input.st);
                 alpha *= mask;
 
                 float3 color = (ambient() + diffuse(input.worldNor)) * getColor(input.st);
-         
+
+                // To make sure color is between 0 and 1
                 color = clamp(color, zeroVec, oneVec);
-
-                float2 f = input.st * _GrassMultiplier * 5;
-                // return float4(random(f),random(f),random(f),1.0f);
-                // return float4(input.st,0.0f,1.0f);
-
-                // float rng = hash42(floor(f)).x;
-                // return float4(rng, rng, rng, 1.0f);
                 
                 return float4(color, alpha);
             }
@@ -136,10 +133,12 @@ Shader "Unlit/GrassShader"
             /// bottom layer. Outputs color from fur texture if not bottom layer. 
             float3 getColor(float2 st)
             {
+                /// Sample from textures //
                 float3 grass = tex2D(_GrassTexture, st);
                 float3 ground = tex2D(_GroundTexture, st);
+                ///
 
-                float isGround = step(_Layer, 0.0f);
+                float isGround = step(_Layer, 0.0f); // Check if ground layer
                 return (ground * isGround) + grass * (1.0f - isGround);
             }
 
@@ -179,6 +178,7 @@ Shader "Unlit/GrassShader"
                 return pow(t, 3);
             }
 
+            /// Hashing functions to remove artifacts //
             uint baseHash(uint2 p)
             {
                 p = 1103515245U * ((p >> 1U)^(p.yx));
@@ -192,9 +192,9 @@ Shader "Unlit/GrassShader"
                 uint4 rz = uint4(n, n * 16807U, n * 48271U, n * 69621U);
                 return float4((rz >> 1) & uint4((0x7fffffffU).xxxx))/float(0x7fffffff);
             }
+            ///
 
             float random2(float2 st) {
-                // return frac(sin(dot(st.xy, float2(12.9898,78.233))) * 43758.5453123);
                 return hash42(st).x;
             }
 
@@ -205,11 +205,6 @@ Shader "Unlit/GrassShader"
                 float b2 = step(_GrassDensity + 1.0f, r);
                 return 1.0f * b1 + (0.0f * b2 + r * (1.0f - b2)) * (1.0f - b1);
             }
-
-            // float random (float2 st) {
-            //     float rng = frac(sin(dot(st.xy, float2(12.9898,78.233))) * 4375834.5453123);
-            //     return rng * step(rng, _GrassDensity);
-            // }
             
             float noise (in float2 st) {
                 float2 i = floor(st);
