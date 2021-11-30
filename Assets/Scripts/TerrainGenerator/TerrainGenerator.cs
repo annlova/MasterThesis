@@ -2521,6 +2521,11 @@ namespace TerrainGenerator
 
             return (cliffs, flats);
         }
+
+        private void SpawnDecorations()
+        {
+            
+        }
         
         private bool IsAcre(Vector2Int pos)
         {

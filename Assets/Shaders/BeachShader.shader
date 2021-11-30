@@ -22,6 +22,7 @@ Shader "Unlit/BeachShader"
             #include "UnityCG.cginc"
 
             float sqDistPointAABB(float2 p, float2 min, float2 max);
+            float nsin(float v);
             
             struct VertexAttributes
             {
@@ -34,23 +35,44 @@ Shader "Unlit/BeachShader"
             {
                 float2 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
+                float4 worldPos : TEXCOORD1;
                 float4 nor : NORMAL;
+                float4 tideHeight : TIDE;
             };
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
 
             float4 _WorldBounds;
-
+            
             FragmentAttributes vert (VertexAttributes input)
             {
                 FragmentAttributes o;
+                float tideChange = 0.15f;
+                float PI = 3.1415927;
+                float time = _Time.y * 0.2f;
+                float animationTimeSkew = 0.3f;
+                // float waveTime = frac(time) * PI * 2.0f;
+                float waveTime = frac(time);
+
+                float drySpeed = 0.5f;
+                float dryTime = frac(time - animationTimeSkew) * drySpeed;
+                
+                float waveIn = -1.0f + smoothstep(0.0f, animationTimeSkew, waveTime) * 2.0f * step(waveTime, animationTimeSkew);
+                float waveOut = 1.0f - smoothstep(0.0f, 1.0f, dryTime) * 2.0f;
+                float tideOffset = max(waveIn, waveOut) * tideChange;
+                
+                // float x = waveTime * 0.3f;
+                // float tideOffset = cos(x) * tideChange;
+                o.tideHeight = float4(-0.8f + tideOffset, -0.8f - tideChange, -0.8f + tideChange, 0.0f);
+                
                 // float4 worldPos = mul(unity_ObjectToWorld, input.vertex);
                 // float shoreDist = sqDistPointAABB(worldPos.xz, _WorldBounds.xy, _WorldBounds.zw);
                 // float shoreDistFactor = shoreDist / (16*16);
                 // float worldY = -(shoreDistFactor * 4.0f);
                 // worldPos.y += worldY;
                 // o.vertex = UnityWorldToClipPos(worldPos);
+                o.worldPos = mul(unity_ObjectToWorld, input.vertex);
                 o.vertex = UnityObjectToClipPos(input.vertex);
                 o.uv = TRANSFORM_TEX(input.uv, _MainTex);
                 o.nor = input.normal;//(UnityObjectToWorldNormal(input.normal.xyz), 0.0f);
@@ -81,9 +103,15 @@ Shader "Unlit/BeachShader"
             float4 frag (FragmentAttributes input) : SV_Target
             {
                 // sample the texture
-                float4 col = tex2D(_MainTex, input.uv) * dot(_WorldSpaceLightPos0, input.nor);
-                col.a = 1.0f;
+                float wet = 1.0f - smoothstep(input.tideHeight.x - 0.03f, input.tideHeight.x, input.worldPos.y);//smoothstep(-0.5f, input.tideHeight.x, input.worldPos.y);
+                float4 col = tex2D(_MainTex, input.uv) * dot(_WorldSpaceLightPos0, input.nor) * (1.0f - ((1.0f - smoothstep(input.tideHeight.y, input.tideHeight.z, input.worldPos.y)) * 0.4f + 0.1f) * wet);
+                col.a = 1.0f;               
                 return col;
+            }
+            
+            float nsin(float v)
+            {
+                return (sin(v) + 1.0f) / 2.0f;
             }
             ENDHLSL
         }

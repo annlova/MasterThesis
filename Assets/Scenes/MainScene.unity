@@ -1457,7 +1457,7 @@ MonoBehaviour:
   maxCliffEat: 5
   minCliffEat: 0
   maxBeachCliffEat: 8
-  minBeachCliffEat: 3
+  minBeachCliffEat: 0
   numRivers: 3
   riverWidth: 4
   slopeWidth: 5
