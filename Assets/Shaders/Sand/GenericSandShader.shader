@@ -56,7 +56,7 @@ Shader "Unlit/GenericSandShader"
                 float3 T = normalize(float3(UnityObjectToWorldDir(tangent)));
                 float3 B = normalize(float3(UnityObjectToWorldDir(bitangent)));
                 float3 N = normalize(float3(UnityObjectToWorldDir(normal)));
-                output.tbn = float3x3(T, B, N);
+                output.tbn = transpose(float3x3(T, B, N));
 
                 float4 modelPos = input.pos;
                 
@@ -80,7 +80,7 @@ Shader "Unlit/GenericSandShader"
 
                 float3 cameraDir = normalize(_WorldSpaceCameraPos - input.worldPos.xyz);
 
-                float specularStrength = 2.0f * roughness;
+                float specularStrength = 10.0f * roughness;
                 float3 reflectDir = reflect(-_WorldSpaceLightPos0.xyz, normal);
                 float spec = pow(max(dot(cameraDir, reflectDir), 0.0f), 32);
                 float3 specular = specularStrength * spec * (1.0f).xxx;
