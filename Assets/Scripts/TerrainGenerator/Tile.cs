@@ -16,6 +16,8 @@ namespace TerrainGenerator
     public bool isBeachCliff;
     public CliffTile cliffTile;
     public List<Tile> connectedCliffs;
+    public Vector2Int cliffDirection;
+    public int cliffTextureNumber;
 
     public List<bool> possibleFloors;
     public int floor;

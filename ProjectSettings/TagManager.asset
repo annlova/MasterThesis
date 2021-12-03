@@ -11,6 +11,10 @@ TagManager:
   - BeachCliff
   - Beach
   - Ocean
+  - Tree
+  - Rock
+  - Canopy
+  - Trunk
   layers:
   - Default
   - TransparentFX

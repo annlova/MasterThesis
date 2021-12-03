@@ -1,8 +1,5 @@
 using System;
 using System.Collections.Generic;
-using UnityEditor;
-using UnityEditor.Experimental.TerrainAPI;
-using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.Assertions;
 using Random = UnityEngine.Random;
@@ -23,6 +20,8 @@ namespace TerrainGenerator
     private readonly CliffTile[] cliffTiles;
     private readonly int maxCliffEat;
     private readonly int minCliffEat;
+    private readonly int maxCliffTextureNumber;
+    private int numCliffs;
     private readonly int cliffElevation;
     
     private Vector2Int pos;
@@ -42,6 +41,7 @@ namespace TerrainGenerator
     public WalkAgent(Tile[,] tiles, int width, int height,
                      Acre[,] acres, Acre startAcre, int acreSize,
                      CliffTile[] cliffTiles, int maxCliffEat, int minCliffEat,
+                     int maxCliffTextureNumber,
                      Vector2Int pos, Vector2Int forward, Vector2Int right,
                      int maxCliffWalkReverts)
     {
@@ -56,6 +56,8 @@ namespace TerrainGenerator
       this.cliffTiles = cliffTiles;
       this.maxCliffEat = maxCliffEat;
       this.minCliffEat = minCliffEat;
+      this.maxCliffTextureNumber = maxCliffTextureNumber;
+      numCliffs = 0;
       cliffElevation = startAcre.elevation;
 
       this.pos = pos;
@@ -452,7 +454,9 @@ namespace TerrainGenerator
       private readonly Vector2Int posBefore;
       private readonly Vector2Int forwardBefore;
       private readonly Vector2Int rightBefore;
-      
+
+      private readonly Vector2Int cliffDirectionBefore; 
+        
       private readonly Tile tile;
       private readonly Tile connectedCliff;
       private readonly CliffTile cliffTile;
@@ -486,6 +490,8 @@ namespace TerrainGenerator
 
       public void apply()
       {
+        tile.cliffDirection = forward;
+        
         agent.pos = pos;
         agent.forward = forward;
         agent.right = right;
@@ -509,6 +515,9 @@ namespace TerrainGenerator
         }
 
         tile.modified = true;
+
+        tile.cliffTextureNumber = agent.numCliffs % agent.maxCliffTextureNumber;
+        agent.numCliffs++;
       }
 
       public void unapply()
@@ -533,6 +542,8 @@ namespace TerrainGenerator
         }
 
         tile.modified = true;
+
+        agent.numCliffs--;
       }
     }
   }

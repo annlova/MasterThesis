@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Xml.Schema;
+using Microsoft.Win32.SafeHandles;
 using UnityEngine;
 using UnityEngine.Analytics;
 using UnityEngine.Assertions;
@@ -41,6 +42,9 @@ namespace TerrainGenerator
         [SerializeField] 
         private int minBeachCliffEat;
         
+        [SerializeField] 
+        private int maxCliffTextureNumber;
+        
         [SerializeField]
         private int numRivers;
         
@@ -52,6 +56,13 @@ namespace TerrainGenerator
         
         [SerializeField]
         private int slopeLength;
+        
+        [SerializeField]
+        private float decorationSpacing;
+        
+        [SerializeField]
+        [Range(0, 1)]
+        private float treeProbability;
         
         [SerializeField]
         private CliffTile[] cliffTiles;
@@ -104,6 +115,15 @@ namespace TerrainGenerator
         [SerializeField]
         private GameObject oceanGridPrefab;
 
+        [SerializeField]
+        private GameObject treeCanopyPrefab;
+
+        [SerializeField]
+        private GameObject treeTrunkPrefab;
+        
+        [SerializeField]
+        private GameObject rockPrefab;
+
         // Private variables outside of terrain generation
 
         private ComputeBuffer tileValueBuffer;
@@ -136,6 +156,18 @@ namespace TerrainGenerator
         private GameObject oceanColliderObject;
         private MeshFilter oceanMeshFilter;
         private Renderer oceanRenderer;
+        private GameObject canopyRenderObject;
+        private GameObject canopyColliderObject;
+        private MeshFilter canopyMeshFilter;
+        private Renderer canopyRenderer;
+        private GameObject trunkRenderObject;
+        private GameObject trunkColliderObject;
+        private MeshFilter trunkMeshFilter;
+        private Renderer trunkRenderer;
+        private GameObject rocksRenderObject;
+        private GameObject rocksColliderObject;
+        private MeshFilter rocksMeshFilter;
+        private Renderer rocksRenderer;
 
         // Start is called before the first frame update
         void Start()
@@ -156,6 +188,7 @@ namespace TerrainGenerator
             ComputeRiverMeta();
             ComputeRivers();
             ComputeSlopes();
+            SpawnDecorations();
             CreateTerrainMesh();
             UpdateShaderVariables();
         }
@@ -292,7 +325,16 @@ namespace TerrainGenerator
                         for (int i = tile.floor; i < tile.elevation; i++)
                         {
                             p = new Vector3(x + 0.5f, i * 2 - riverOffset, height - 1 - z + 0.5f);
-                            Instantiate(tile.cliffTile.prefab, p, tile.cliffTile.prefab.transform.rotation, transform);
+                            var obj = Instantiate(tile.cliffTile.prefab, p, tile.cliffTile.prefab.transform.rotation, transform);
+                            
+                            // Set cliff texture number
+                            var mesh = obj.GetComponent<MeshFilter>().mesh;
+                            var uv2 = mesh.uv2;
+                            for (int j = 0; j < uv2.Length; j++)
+                            {
+                                uv2[j] = new Vector2(tile.cliffTextureNumber, 0.0f);
+                            }
+                            mesh.uv2 = uv2;
                         }
 
                         if (tile.isBeachCliff)
@@ -684,16 +726,16 @@ namespace TerrainGenerator
                 // Calculate new normal
                 var worldPosN = worldPos + Vector3.forward;
                 var offsetN = ComputeBeachVertexOffset(worldPosN);
-                worldPosN.y = offsetN;
+                worldPosN += Vector3.down * offsetN;
                 var worldPosW = worldPos + Vector3.left;
                 var offsetW = ComputeBeachVertexOffset(worldPosW);
-                worldPosW.y = offsetW;
+                worldPosW += Vector3.down * offsetW;
                 var worldPosE = worldPos + Vector3.right;
                 var offsetE = ComputeBeachVertexOffset(worldPosE);
-                worldPosE.y = offsetE;
+                worldPosE += Vector3.down * offsetE;
                 var worldPosS = worldPos + Vector3.back;
                 var offsetS = ComputeBeachVertexOffset(worldPosS);
-                worldPosS.y = offsetS;
+                worldPosS += Vector3.down * offsetS;
 
                 var vecN = (worldPosN - worldPos);//.normalized;
                 var vecW = (worldPosW - worldPos);//.normalized;
@@ -705,7 +747,7 @@ namespace TerrainGenerator
                 var crossES = Vector3.Cross(vecE, vecS);
                 var crossSW = Vector3.Cross(vecS, vecW);
                 var invertedNormal = (crossWN + crossNE + crossES + crossSW).normalized;
-                normals[i] = new Vector3(-invertedNormal.x, invertedNormal.y, -invertedNormal.z);
+                normals[i] = new Vector3(invertedNormal.x, invertedNormal.y, invertedNormal.z);
             }
 
             mesh.vertices = vertices;
@@ -930,6 +972,9 @@ namespace TerrainGenerator
             var combineRivers = new List<CombineInstance>();
             var combineRiversBottom = new List<CombineInstance>();
             var combineOcean = new List<CombineInstance>();
+            var combineCanopies = new List<CombineInstance>();
+            var combineTrunks = new List<CombineInstance>();
+            var combineRocks = new List<CombineInstance>();
 
             int i = 0;
             while (i < meshFilters.Length)
@@ -1008,6 +1053,39 @@ namespace TerrainGenerator
                         }
                         combineOcean.Add(ocean);
                         break;
+                    case "Canopy":
+                        var canopy = new CombineInstance();
+                        canopy.mesh = meshFilters[i].mesh;
+                        canopy.transform = meshFilters[i].transform.localToWorldMatrix;
+                        var canopyCollider = meshFilters[i].gameObject.transform.Find("Collider");
+                        if (canopyCollider)
+                        {
+                            canopyCollider.transform.SetParent(canopyColliderObject.transform);
+                        }
+                        combineCanopies.Add(canopy);
+                        break;
+                    case "Trunk":
+                        var trunk = new CombineInstance();
+                        trunk.mesh = meshFilters[i].mesh;
+                        trunk.transform = meshFilters[i].transform.localToWorldMatrix;
+                        var trunkCollider = meshFilters[i].gameObject.transform.Find("Collider");
+                        if (trunkCollider)
+                        {
+                            trunkCollider.transform.SetParent(trunkColliderObject.transform);
+                        }
+                        combineTrunks.Add(trunk);
+                        break;
+                    case "Rock":
+                        var rock = new CombineInstance();
+                        rock.mesh = meshFilters[i].mesh;
+                        rock.transform = meshFilters[i].transform.localToWorldMatrix;
+                        var rockCollider = meshFilters[i].gameObject.transform.Find("Collider");
+                        if (rockCollider)
+                        {
+                            rockCollider.transform.SetParent(rocksColliderObject.transform);
+                        }
+                        combineRocks.Add(rock);
+                        break;
                     default:
                         i++;
                         continue;
@@ -1052,6 +1130,21 @@ namespace TerrainGenerator
             oceanMeshFilter.sharedMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
             oceanMeshFilter.sharedMesh.CombineMeshes(combineOcean.ToArray());
             oceanMeshFilter.gameObject.SetActive(true);
+
+            canopyMeshFilter.sharedMesh = new Mesh();
+            canopyMeshFilter.sharedMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            canopyMeshFilter.sharedMesh.CombineMeshes(combineCanopies.ToArray());
+            canopyMeshFilter.gameObject.SetActive(true);
+
+            trunkMeshFilter.sharedMesh = new Mesh();
+            trunkMeshFilter.sharedMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            trunkMeshFilter.sharedMesh.CombineMeshes(combineTrunks.ToArray());
+            trunkMeshFilter.gameObject.SetActive(true);
+
+            rocksMeshFilter.sharedMesh = new Mesh();
+            rocksMeshFilter.sharedMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            rocksMeshFilter.sharedMesh.CombineMeshes(combineRocks.ToArray());
+            rocksMeshFilter.gameObject.SetActive(true);
         }
 
         private void OnDisable()
@@ -1114,6 +1207,21 @@ namespace TerrainGenerator
             oceanColliderObject = transform.Find("OceanCollider").gameObject;
             oceanMeshFilter = oceanRenderObject.GetComponent<MeshFilter>();
             oceanRenderer = oceanRenderObject.GetComponent<Renderer>();
+            
+            canopyRenderObject = transform.Find("CanopyRender").gameObject;
+            canopyColliderObject = transform.Find("CanopyCollider").gameObject;
+            canopyMeshFilter = canopyRenderObject.GetComponent<MeshFilter>();
+            canopyRenderer = canopyRenderObject.GetComponent<Renderer>();
+            
+            trunkRenderObject = transform.Find("TrunkRender").gameObject;
+            trunkColliderObject = transform.Find("TrunkCollider").gameObject;
+            trunkMeshFilter = trunkRenderObject.GetComponent<MeshFilter>();
+            trunkRenderer = trunkRenderObject.GetComponent<Renderer>();
+            
+            rocksRenderObject = transform.Find("RocksRender").gameObject;
+            rocksColliderObject = transform.Find("RocksCollider").gameObject;
+            rocksMeshFilter = rocksRenderObject.GetComponent<MeshFilter>();
+            rocksRenderer = rocksRenderObject.GetComponent<Renderer>();
             
             tileValues = new Vector4[width * height];
             for (int i = 0; i < tileValues.Length; i++)
@@ -1511,6 +1619,7 @@ namespace TerrainGenerator
                 tiles, width, height,
                 acres, startAcre, acreSize,
                 cliffTiles, maxEat, minEat,
+                maxCliffTextureNumber,
                 startTile.pos, forward, right,
                 maxCliffWalkReverts
             );
@@ -2054,6 +2163,123 @@ namespace TerrainGenerator
             return validPlacements.Count > 0;
         }
 
+        private void ComputeWaterfalls()
+        {
+            foreach (var acre in acres)
+            {
+                // No river, no waterfall
+                if (!acre.hasRiver)
+                {
+                    continue;
+                }
+
+                // Find first cliff tile
+                var startCliff = FindFirstCliffInAcre(acre);
+                if (startCliff == null)
+                {
+                    // No cliffs, no waterfall
+                    continue;
+                }
+                
+                // Add waterfall if needed
+                if (acre.hasRiverWest && acre.hasWestCliff)
+                {
+                    // startCliff.
+                }
+                else if (acre.hasRiverSouth && acre.hasSouthCliff)
+                {
+                    
+                }
+                else if (acre.hasRiverEast && acre.hasEastCliff)
+                {
+                    
+                }
+            }
+        }
+
+        private Tile FindFirstCliffInAcre(Acre acre)
+        {
+            if (acre.hasWestCliff)
+            {
+                return FindFirstWestCliffTile(acre);
+            }
+            else if (acre.hasSouthCliff)
+            {
+                return FindFirstSouthCliffTile(acre);
+            }
+            else if (acre.hasEastCliff)
+            {
+                return FindFirstEastCliffTile(acre);
+            }
+
+            return null;
+        }
+        private Tile FindFirstWestCliffTile(Acre acre)
+        {
+            Tile startCliff = null;
+            Vector2Int acrePos = acre.pos * acreSize;
+            for (int x = 0; x < acreSize; x++)
+            {
+                var tile = tiles[acrePos.x + x, acrePos.y];
+                if (tile.isCliff)
+                {
+                    startCliff = tile;
+                    break;
+                }
+            }
+
+            if (startCliff == null)
+            {
+                throw new NotSupportedException();
+            }
+
+            return startCliff;
+        }
+        
+        private Tile FindFirstSouthCliffTile(Acre acre)
+        {
+            Tile startCliff = null;
+            Vector2Int acrePos = acre.pos * acreSize;
+            for (int y = 0; y < acreSize; y++)
+            {
+                var tile = tiles[acrePos.x, acrePos.y + acreSize - 1 - y];
+                if (tile.isCliff)
+                {
+                    startCliff = tile;
+                    break;
+                }
+            }
+
+            if (startCliff == null)
+            {
+                throw new NotSupportedException();
+            }
+
+            return startCliff;
+        }
+        
+        private Tile FindFirstEastCliffTile(Acre acre)
+        {
+            Tile startCliff = null;
+            Vector2Int acrePos = acre.pos * acreSize;
+            for (int x = 0; x < acreSize; x++)
+            {
+                var tile = tiles[acrePos.x + acreSize - 1 - x, acrePos.y + acreSize - 1];
+                if (tile.isCliff)
+                {
+                    startCliff = tile;
+                    break;
+                }
+            }
+
+            if (startCliff == null)
+            {
+                throw new NotSupportedException();
+            }
+
+            return startCliff;
+        }
+
         // TODO: Create real river walk agent
         private void ComputeRivers()
         {
@@ -2524,7 +2750,134 @@ namespace TerrainGenerator
 
         private void SpawnDecorations()
         {
+            var points = PoissonDisk(new Vector4(0.0f, 0.0f, width, height), decorationSpacing);
+            Debug.Log(points.Count);
+            for (int i = 0; i < points.Count; i++)
+            {
+                var p2 = points[i];
+                var tile = tiles[(int) p2.x, height - 1 - (int) p2.y];
+                if (tile.isCliff || tile.isBeach || tile.isSlope || tile.isRiver)
+                {
+                    continue;
+                }
+                var p = new Vector3(points[i].x, tile.elevation * elevationHeight, points[i].y);
+                var isTree = Random.Range(0.0f, 1.0f) <= treeProbability;
+                if (isTree)
+                {
+                    Instantiate(treeCanopyPrefab, p, treeCanopyPrefab.transform.rotation, transform); // TODO
+                    Instantiate(treeTrunkPrefab, p, treeTrunkPrefab.transform.rotation, transform); // TODO
+                }
+                else
+                {
+                    Instantiate(rockPrefab, p, rockPrefab.transform.rotation, transform); // TODO
+                }
+            }
+        }
+
+        /// <summary>
+        /// Fast Poisson Disk - Robert Bridson
+        /// extents holds min and max per dimension (xy - min, zw - max).
+        /// r holds minimum distance between samples.
+        /// k holds the limit of samples to choose before rejection.
+        /// </summary>
+        private List<Vector2> PoissonDisk(Vector4 extents, float r, int k = 30)
+        {
+            var cellSize = (r / (float) Math.Sqrt(2.0));
+            var gridW = (int) Math.Ceiling((extents.z - extents.x) / cellSize);
+            var gridH = (int) Math.Ceiling((extents.w - extents.y) / cellSize);
+            var grid = new int[gridW * gridH];
+            for (var i = 0; i < grid.Length; i++)
+            {
+                grid[i] = -1;
+            }
             
+            var points = new List<Vector2>();
+            var active = new List<int>();
+
+            var x = Random.Range(0.0f, extents.z - extents.x);
+            var y = Random.Range(0.0f, extents.w - extents.y);
+            var xi = (int) (x / cellSize);
+            var yi = (int) (y / cellSize);
+            var sample = new Vector2(x, y);
+
+            points.Add(sample);
+            active.Add(0);
+            grid[xi + yi * gridW] = 0;
+
+            while (active.Count > 0)
+            {
+                // Get random sample from active list
+                var i = active[Random.Range(0, active.Count)];
+                // Sample k annulus points
+                var valid = false;
+                for (int j = 0; j < k; j++)
+                {
+                    var p = RandomAnnulusPoint(points[i], r, r * 2.0f);
+                    if (p.x < 0.0f || p.x > width || p.y < 0.0f || p.y > height)
+                    {
+                        continue;
+                    }
+                    
+                    xi = (int) (p.x / cellSize);
+                    yi = (int) (p.y / cellSize);
+                    var gridIndex = xi + yi * gridW;
+                    var neighbours = new int[9];
+                    neighbours[0] = gridIndex + gridW - 1;
+                    neighbours[1] = gridIndex + gridW;
+                    neighbours[2] = gridIndex + gridW + 1;
+                    neighbours[3] = gridIndex - 1;
+                    neighbours[4] = gridIndex;
+                    neighbours[5] = gridIndex + 1;
+                    neighbours[6] = gridIndex - gridW - 1;
+                    neighbours[7] = gridIndex - gridW;
+                    neighbours[8] = gridIndex - gridW + 1;
+                    valid = true;
+                    foreach (var n in neighbours)
+                    {
+                        if (n > 0 && n < grid.Length &&
+                            grid[n] > -1)
+                        {
+                            var np = points[grid[n]];
+                            if (Vector2.Distance(p, np) < r)
+                            {
+                                valid = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (valid)
+                    {
+                        points.Add(p);
+                        active.Add(points.Count - 1);
+                        grid[gridIndex] = points.Count - 1;
+                        break;
+                    }
+                }
+
+                if (!valid)
+                {
+                    active.Remove(i);
+                }
+            }
+
+            // Offset points to correct bounds
+            for (int i = 0; i < points.Count; i++)
+            {
+                points[i] += new Vector2(extents.x, extents.y);
+            }
+
+            return points;
+        }
+
+        private Vector2 RandomAnnulusPoint(Vector2 p, float rMin, float rMax)
+        {
+            var theta = Random.Range(0.0f, 2.0f * (float) Math.PI);
+            var A = 2.0f / (rMax * rMax - rMin * rMin);
+            var r = (float) Math.Sqrt(2.0f * Random.Range(0.0f, 1.0f) / A + rMin * rMin);
+            var x = r * (float) Math.Cos(theta);
+            var y = r * (float) Math.Sin(theta);
+            return p + new Vector2(x, y);
         }
         
         private bool IsAcre(Vector2Int pos)

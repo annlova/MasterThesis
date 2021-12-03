@@ -7,7 +7,6 @@ Shader "Unlit/BeachShader"
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
         LOD 100
 
         Pass
@@ -75,7 +74,7 @@ Shader "Unlit/BeachShader"
                 o.worldPos = mul(unity_ObjectToWorld, input.vertex);
                 o.vertex = UnityObjectToClipPos(input.vertex);
                 o.uv = TRANSFORM_TEX(input.uv, _MainTex);
-                o.nor = input.normal;//(UnityObjectToWorldNormal(input.normal.xyz), 0.0f);
+                o.nor = input.normal;//UnityObjectToWorldNormal(input.normal.xyz);
                 return o;
             }
 
