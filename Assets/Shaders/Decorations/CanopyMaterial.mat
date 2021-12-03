@@ -71,8 +71,8 @@ Material:
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _Rotate: 0
-    - _Scale: 0.33
+    - _Rotate: 105.6
+    - _Scale: 0.61
     - _Smoothness: 1
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
@@ -81,8 +81,8 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 0.44870907, g: 0.9528302, b: 0.24719654, a: 1}
-    - _Diffuse: {r: 0.28776833, g: 0.764151, b: 0.27033645, a: 1}
+    - _Diffuse: {r: 0.7735849, g: 0.39119413, b: 0.032840855, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _FresnelColor: {r: 0.0046724835, g: 0.14150941, b: 0.016571345, a: 1}
-    - _Specular: {r: 0.36330777, g: 0.9528302, b: 0.35506406, a: 1}
+    - _FresnelColor: {r: 0.764151, g: 0.60661006, b: 0, a: 1}
+    - _Specular: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []

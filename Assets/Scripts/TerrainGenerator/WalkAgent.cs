@@ -455,8 +455,6 @@ namespace TerrainGenerator
       private readonly Vector2Int forwardBefore;
       private readonly Vector2Int rightBefore;
 
-      private readonly Vector2Int cliffDirectionBefore; 
-        
       private readonly Tile tile;
       private readonly Tile connectedCliff;
       private readonly CliffTile cliffTile;

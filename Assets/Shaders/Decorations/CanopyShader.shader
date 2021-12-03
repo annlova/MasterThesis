@@ -123,7 +123,8 @@ Shader "Unlit/CanopyShader"
                 
                 // Rotate
                 float2 uvRotated;
-                Unity_Rotate_Degrees_float(uvRemapped, float2(0.0f, 0.0f), _Rotate, uvRotated);
+                float rotation = sin(_Time.w * 1.0f) * 1.0f;
+                Unity_Rotate_Degrees_float(uvRemapped, float2(0.0f, 0.0f), rotation, uvRotated);
 
                 float4 uv4Remapped = float4(uvRotated, 0.0f, 0.0f);
                 

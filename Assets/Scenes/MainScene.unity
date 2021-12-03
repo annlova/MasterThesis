@@ -2173,6 +2173,7 @@ MonoBehaviour:
   minCliffEat: 0
   maxBeachCliffEat: 8
   minBeachCliffEat: 0
+  maxCliffTextureNumber: 3
   numRivers: 2
   riverWidth: 5
   slopeWidth: 5
@@ -5184,6 +5185,7 @@ MonoBehaviour:
   slopeCliffSpecialSEPrefab: {fileID: 529439155956243859, guid: 61a1dcffb5e1056428a2d12be4166d3a, type: 3}
   beachGridPrefab: {fileID: 2347494340151451268, guid: b0e701562edb9d04bb72a50da9a92f8b, type: 3}
   oceanGridPrefab: {fileID: 6767357039052695837, guid: 5e466ea89dac12741bd3ac0a4c3b69ce, type: 3}
+  waterfallPrefab: {fileID: 7225465303150318195, guid: 32261dc4d666bb447b1796f2a4bac375, type: 3}
   treeCanopyPrefab: {fileID: 5130703439827060962, guid: 690b32e21fb6fd24aa1a9a2cebec6b54, type: 3}
   treeTrunkPrefab: {fileID: 7892580480987733543, guid: 819adb4722c60b94591902b80aff634a, type: 3}
   rockPrefab: {fileID: 2235921654663849865, guid: 7804eaa8ea94e0f45946ff99535053f3, type: 3}

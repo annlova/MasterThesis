@@ -48,6 +48,8 @@ namespace TerrainGenerator
     public bool isSlopeHigher;
     public int slopeFactor;
 
+    public bool isWaterfall;
+    
     public bool isBeach;
     
     public bool modified;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Xml.Schema;
 using Microsoft.Win32.SafeHandles;
 using UnityEngine;
@@ -114,6 +115,9 @@ namespace TerrainGenerator
 
         [SerializeField]
         private GameObject oceanGridPrefab;
+        
+        [SerializeField] 
+        private GameObject waterfallPrefab;
 
         [SerializeField]
         private GameObject treeCanopyPrefab;
@@ -189,6 +193,7 @@ namespace TerrainGenerator
             ComputeRivers();
             ComputeSlopes();
             SpawnDecorations();
+            ComputeWaterfalls();
             CreateTerrainMesh();
             UpdateShaderVariables();
         }
@@ -319,7 +324,11 @@ namespace TerrainGenerator
                 {
                     var tile = tiles[x, z];
                     var riverOffset = tile.isRiver ? 0.7f : 0.0f;
-                    if (tile.isCliff)
+                    if (tile.isWaterfall)
+                    {
+                        
+                    }
+                    else if (tile.isCliff)
                     {
                         Vector3 p = Vector3.zero;
                         for (int i = tile.floor; i < tile.elevation; i++)
@@ -2184,7 +2193,66 @@ namespace TerrainGenerator
                 // Add waterfall if needed
                 if (acre.hasRiverWest && acre.hasWestCliff)
                 {
-                    // startCliff.
+                    var westCliffList = new List<Tile>();
+                    var tile = startCliff;
+                    while (tile.cliffDirection == new Vector2Int(0, 1) &&
+                           !tile.isMergeCliff &&
+                           tile.acre == acre)
+                    {
+                        westCliffList.Add(tile);
+                        tile = tile.connectedCliffs[1];
+                    }
+                    
+                    Assert.IsTrue(westCliffList.Count >= riverWidth);
+                    var start = Random.Range(0, westCliffList.Count - riverWidth);
+                    var end = start + riverWidth - 1;
+                    for (int i = start; i <= end; i++)
+                    {
+                        westCliffList[i].isWaterfall = true;
+                    }
+                    
+                    var sTile = westCliffList[start];
+                    var sMesh = sTile.cliffTile.prefab.GetComponent<MeshFilter>().sharedMesh;
+                    var sVerts = sMesh.vertices;
+                    var a = sVerts[0];
+                    var c = sVerts[0];
+                    foreach (var v in sVerts)
+                    {
+                        if (v.z >= a.z && v.y >= a.y)
+                        {
+                            a = v;
+                        }
+                    
+                        if (v.z >= c.z && v.y <= c.y)
+                        {
+                            c = v;
+                        }
+                    }
+
+                    var eTile = westCliffList[end];
+                    var eMesh = eTile.cliffTile.prefab.GetComponent<MeshFilter>().sharedMesh;
+                    var eVerts = eMesh.vertices;
+                    var b = eVerts[0];
+                    var d = eVerts[0];
+                    foreach (var v in sVerts)
+                    {
+                        if (v.z <= b.z && v.y >= b.y)
+                        {
+                            b = v;
+                        }
+
+                        if (v.z <= d.z && v.y <= d.y)
+                        {
+                            d = v;
+                        }
+                    }
+
+                    var posDiff = eTile.pos - sTile.pos;
+                    b += new Vector3(posDiff.x, 0.0f, -posDiff.y);
+                    d += new Vector3(posDiff.x, 0.0f, -posDiff.y);
+                    var p = new Vector3(sTile.pos.x, (acre.elevation - 1) * elevationHeight, height - 1 - sTile.pos.y);
+                    CreateWaterfall(a, b, c, d, p);
+                    Debug.Log("West waterfall created!");
                 }
                 else if (acre.hasRiverSouth && acre.hasSouthCliff)
                 {
@@ -2195,6 +2263,53 @@ namespace TerrainGenerator
                     
                 }
             }
+        }
+
+        private void CreateWaterfall(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 p)
+        {
+            var n3d = b - a;
+            var n2d = new Vector2(n3d.z, -n3d.x);
+            n3d = new Vector3(n2d.x, 0.0f, n2d.y);
+
+            var waterfall = Instantiate(waterfallPrefab, p, Quaternion.identity, transform);
+            var mesh = waterfall.GetComponent<MeshFilter>().mesh;
+            var vertices = mesh.vertices;
+            var normals = mesh.normals;
+            Assert.IsTrue(vertices.Length == 4);
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                var v = vertices[i];
+                if (v.x < 0.0f)
+                {
+                    if (v.y > 0.0f)
+                    {
+                        vertices[i] = a;
+                        normals[i] = n3d;
+                    }
+                    else
+                    {
+                        vertices[i] = c;
+                        normals[i] = n3d;
+                    }
+                }
+                else
+                {
+                    if (v.y > 0.0f)
+                    {
+                        vertices[i] = b;
+                        normals[i] = n3d;
+                    }
+                    else
+                    {
+                        vertices[i] = d;
+                        normals[i] = n3d;
+                    }
+                }
+            }
+
+            mesh.vertices = vertices;
+            
+            
         }
 
         private Tile FindFirstCliffInAcre(Acre acre)

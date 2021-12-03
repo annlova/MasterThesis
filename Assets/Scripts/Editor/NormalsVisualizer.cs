@@ -15,7 +15,7 @@ public class NormalsVisualizer : Editor {
 
     void OnSceneGUI()
     {
-    return;
+    // return;
         if (mesh == null) {
             return;
         }
