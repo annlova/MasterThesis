@@ -23,6 +23,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _ColorRandomizer:
+        m_Texture: {fileID: 2800000, guid: 8655f77183f5fc949adadb5186fca4af, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _DetailAlbedoMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -40,7 +44,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 712d810589dccfd4aa232cb1e54658e5, type: 3}
+        m_Texture: {fileID: 2800000, guid: 35fe2c133c6fba24aa3ef44166297c5a, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -58,7 +62,7 @@ Material:
     m_Floats:
     - _Blend: 1
     - _BumpScale: 1
-    - _CutOff: 0.04
+    - _CutOff: 0.03
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
@@ -66,23 +70,24 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _Inflate: 0
+    - _Inflate: 0.2
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _Rotate: 105.6
-    - _Scale: 0.61
-    - _Smoothness: 1
+    - _Rotate: 0
+    - _Scale: 0.39
+    - _Smoothness: 0.2
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
+    - _WindStrength: 4.8
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 0.44870907, g: 0.9528302, b: 0.24719654, a: 1}
-    - _Diffuse: {r: 0.7735849, g: 0.39119413, b: 0.032840855, a: 1}
+    - _Diffuse: {r: 0.07843135, g: 0.7921569, b: 0.40255633, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _FresnelColor: {r: 0.764151, g: 0.60661006, b: 0, a: 1}
-    - _Specular: {r: 0, g: 0, b: 0, a: 1}
+    - _FresnelColor: {r: 0, g: 0.4509804, b: 0.19145644, a: 1}
+    - _Specular: {r: 0.07843135, g: 0.7921569, b: 0.12759215, a: 1}
   m_BuildTextureStacks: []

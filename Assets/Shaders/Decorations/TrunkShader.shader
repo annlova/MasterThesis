@@ -1,4 +1,4 @@
-Shader "Unlit/GenericSandShader"
+Shader "Unlit/TrunkShader"
 {
     Properties
     {
@@ -6,6 +6,7 @@ Shader "Unlit/GenericSandShader"
         _NormMap ("Normal map", 2D) = "white" {}
         _GradientMap ("Gradient map", 2D) = "white" {}
         _RoughnessMap ("Roughness map", 2D) = "white" {}
+        _ColorMultiplier ("Color Multiplier", Float) = 1.0
     }
     SubShader
     {
@@ -42,6 +43,8 @@ Shader "Unlit/GenericSandShader"
             sampler2D _NormMap;
             sampler2D _GradientMap;
             sampler2D _RoughnessMap;
+
+            float _ColorMultiplier;
 
             FragmentAttributes vert (VertexAttributes input)
             {
@@ -86,11 +89,10 @@ Shader "Unlit/GenericSandShader"
             fixed4 frag (FragmentAttributes input) : SV_Target
             {
                 // sample the texture
-                float2 st = input.st * 3.0f;
+                float2 st = input.st * 2.0f;
                 float3 color = tex2D(_MainTex, st).rgb;
                 float3 normal = tex2D(_NormMap, st).rgb;
                 normal = normalize(mul(input.tbn, normal));
-                // normal = input.nor;
                 float2 gradientSample = float2(calcGradientAmount(normal), 0.0f);
                 float3 gradient = tex2D(_GradientMap, gradientSample).rgb;
                 float3 roughness = tex2D(_RoughnessMap, st).rgb;
@@ -104,14 +106,14 @@ Shader "Unlit/GenericSandShader"
                 float spec = pow(max(dot(cameraDir, reflectDir), 0.0f), 32);
                 float3 specular = specularStrength * spec * (1.0f).xxx;
 
-                // color = (color + gradient);
+                color = gradient;
 
-                float ambient = 0.6f;
+                float ambient = 0.0f;
                 float diff = diffuse(normal, _WorldSpaceLightPos0);
-                float3 outColor = color * (ambient + diff + specular);
+                float3 outColor = color * (ambient + diff) * _ColorMultiplier;
 
-                float wet = 1.0f - smoothstep(input.tideHeight.x - 0.03f, input.tideHeight.x, input.worldPos.y);//smoothstep(-0.5f, input.tideHeight.x, input.worldPos.y);
-                outColor *= (1.0f - ((1.0f - smoothstep(input.tideHeight.y, input.tideHeight.z, input.worldPos.y)) * 0.4f + 0.1f) * wet);
+                // float wet = 1.0f - smoothstep(input.tideHeight.x - 0.03f, input.tideHeight.x, input.worldPos.y);//smoothstep(-0.5f, input.tideHeight.x, input.worldPos.y);
+                // outColor *= (1.0f - ((1.0f - smoothstep(input.tideHeight.y, input.tideHeight.z, input.worldPos.y)) * 0.4f + 0.1f) * wet);
                 
                 
                 return float4(outColor, 1.0f);

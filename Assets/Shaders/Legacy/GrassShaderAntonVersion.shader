@@ -114,6 +114,7 @@ Shader "Unlit/GrassShader"
                 float alpha = genAlpha(grassPlanePos);
 
                 float3 color = (ambient() + diffuse(input.worldNor)) * getColor(worldPlanePos * 0.1f, worldPlanePos * 0.1f);
+                float highlight = step(0.8f, layerFactor());
                 // color *= 1.0f + 0.3f * layerFactor() * windFactor;
                 // color *= 0.3f + smoothstep(0.0f, 1.0f, layerFactor()) * 0.7f;
 

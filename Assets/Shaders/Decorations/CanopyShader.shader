@@ -6,11 +6,13 @@ Shader "Unlit/CanopyShader"
         _Scale ("Scale", Float) = 1.0
         _Inflate ("Inflation", Float) = 0.0
         _Rotate ("Rotation Degrees", Float) = 0.0
+        _WindStrength ("Wind Strength", Float) = 1.0
         _Diffuse ("Diffuse Color", Color) = (0.5, 0.8, 0.5)
         _Smoothness ("Smoothness", Float) = 1.0
         _Specular ("Specular Color", Color) = (0.5, 0.8, 0.5)
         _FresnelColor ("Fresnel Color", Color) = (0.5, 0.8, 0.5)
         _FresnelPower ("Fresnel Power", Int) = 16
+        _ColorRandomizer ("Color Randomizer", 2D) = "white" {}
         _Blend ("Blend", Range(0.0, 1.0)) = 1.0
         _CutOff ("Cut Off", Range(0.0, 1.0)) = 0.5
     }
@@ -52,11 +54,14 @@ Shader "Unlit/CanopyShader"
             float _Scale;
             float _Inflate;
             float _Rotate;
+            float _WindStrength;
             float4 _Diffuse;
             float _Smoothness;
             float4 _Specular;
             float4 _FresnelColor;
             int _FresnelPower;
+            sampler2D _ColorRandomizer;
+            float4 _ColorRandomizer_ST;
             float _Blend;
             float _CutOff;
 
@@ -104,6 +109,24 @@ Shader "Unlit/CanopyShader"
                 UV += Center;
                 Out = UV;
             }
+
+            uint baseHash(uint2 p)
+            {
+                p = 1103515245U * ((p >> 1U)^(p.yx));
+                uint h32 = 1103515245U * ((p.x)^(p.y>>3U));
+                return h32^(h32 >> 16);
+            }
+
+            float4 hash42(float2 x)
+            {
+                uint n = baseHash(asuint(x));
+                uint4 rz = uint4(n, n * 16807U, n * 48271U, n * 69621U);
+                return float4((rz >> 1) & uint4((0x7fffffffU).xxxx))/float(0x7fffffff);
+            }
+
+            float random2(float2 st) {
+                return hash42(st).x;
+            }
             
             FragmentAttributes vert (VertexAttributes i)
             {
@@ -123,49 +146,69 @@ Shader "Unlit/CanopyShader"
                 
                 // Rotate
                 float2 uvRotated;
-                float rotation = sin(_Time.w * 1.0f) * 1.0f;
+                float rng = random2(i.vertex.xz) * 360.0f;
+                // float rotation = (sin(_Time.w * 10.0f * rng) + sin(_Time.w + rng)) / 2.0f * _WindStrength * rng;
+                float rotation = _Rotate;
+                // float rotation = _Rotate * rng * 90.0f;
                 Unity_Rotate_Degrees_float(uvRemapped, float2(0.0f, 0.0f), rotation, uvRotated);
 
-                float4 uv4Remapped = float4(uvRotated, 0.0f, 0.0f);
+                // float4 uv4Remapped = float4(uvRotated, 0.0f, 0.0f);
+                float3 uv4Remapped = float3(uvRotated, 0.0f);
                 
                 // View matrix
-                float4x4 view = unity_WorldToCamera;
+                // float4x4 view = unity_WorldToCamera;
+                float3x3 view = UNITY_MATRIX_V;
 
                 // Multiply
-                float4 uvView;
-                Unity_Multiply_float4_float4x4(uv4Remapped, view, uvView);
+                // float4 uvView;
+                // Unity_Multiply_float4_float4x4(uv4Remapped, view, uvView);
+                float3 uvView;
+                uvView = mul(uv4Remapped, view);
 
                 // Object to world matrix
-                float4x4 objToWorld = unity_ObjectToWorld;
+                // float4x4 objToWorld = unity_ObjectToWorld;
+                float3x3 objToWorld = UNITY_MATRIX_M;
 
                 // Multiply
-                float4 uvWorld;
-                Unity_Multiply_float4_float4x4(uvView, objToWorld, uvWorld);
+                // float4 uvWorld;
+                // Unity_Multiply_float4_float4x4(uvView, objToWorld, uvWorld);
+                float3 uvWorld;
+                uvWorld = mul(uvView, objToWorld);
 
                 // Normalize
-                float3 objectScale = float3(length(float3(UNITY_MATRIX_M[0].x, UNITY_MATRIX_M[1].x, UNITY_MATRIX_M[2].x)),
-                                            length(float3(UNITY_MATRIX_M[0].y, UNITY_MATRIX_M[1].y, UNITY_MATRIX_M[2].y)),
-                                            length(float3(UNITY_MATRIX_M[0].z, UNITY_MATRIX_M[1].z, UNITY_MATRIX_M[2].z)));
-                float4 uvNormalized;
-                Unity_Normalize_float4(float4(uvWorld.xyz * objectScale, 0.0f), uvNormalized);
+                float3 objectScale = float3(length(float3(objToWorld[0].x, objToWorld[1].x, objToWorld[2].x)),
+                                            length(float3(objToWorld[0].y, objToWorld[1].y, objToWorld[2].y)),
+                                            length(float3(objToWorld[0].z, objToWorld[1].z, objToWorld[2].z)));
+                // float4 uvNormalized;
+                // Unity_Normalize_float4(float4(uvWorld.xyz * objectScale, 0.0f), uvNormalized);
+                float3 uvNormalized;
+                uvNormalized = normalize(uvWorld * objectScale);
 
                 // Scale
-                float4 uvScaled;
-                Unity_Multiply_float4_float4(_Scale, uvNormalized, uvScaled);
+                // float4 uvScaled;
+                // Unity_Multiply_float4_float4(_Scale, uvNormalized, uvScaled);
+                float3 uvScaled;
+                uvScaled = _Scale * uvNormalized;
 
                 // Inflate
-                float4 inflation;
-                Unity_Multiply_float4_float4(float4(o.worldNor, 0.0f), _Inflate, inflation);
+                // float4 inflation;
+                // Unity_Multiply_float4_float4(float4(o.worldNor, 0.0f), _Inflate, inflation);
+                float3 inflation;
+                inflation = mul(o.worldNor, _Inflate);
 
                 // Add
-                float4 uvInflated;
-                Unity_Add_float4(inflation, uvScaled, uvInflated);
+                // float4 uvInflated;
+                // Unity_Add_float4(inflation, uvScaled, uvInflated);
+                float3 uvInflated;
+                uvInflated = inflation + uvScaled;
                 
                 // Lerp
-                float4 offset;
-                Unity_Lerp_float4((0.0f).xxxx, uvInflated, _Blend, offset);
+                // float4 offset;
+                // Unity_Lerp_float4((0.0f).xxxx, uvInflated, _Blend, offset);
+                float3 offset;
+                offset = lerp((0.0f).xxx, uvInflated, _Blend);
 
-                float4 localPos = i.vertex + offset;
+                float4 localPos = i.vertex + float4(offset, 0.0f);
                 o.worldPos = mul(localPos, unity_ObjectToWorld);
                 o.vertex = UnityObjectToClipPos(localPos);
                 return o;
@@ -196,8 +239,13 @@ Shader "Unlit/CanopyShader"
                 float fresnel;
                 Unity_FresnelEffect_float(i.worldNor, viewDir, _FresnelPower, fresnel);
 
+                // Color randomizer
+                float3 colorRandomizer = tex2D(_ColorRandomizer, i.uv).rgb;
+                
                 // Final Color
                 float3 color = _Diffuse * diffuse + _Specular * spec + fresnel * _FresnelColor;
+                color *= colorRandomizer;
+                
                 return float4(color, 1.0f);
             }
             ENDHLSL

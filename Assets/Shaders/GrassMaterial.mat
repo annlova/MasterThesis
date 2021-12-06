@@ -40,11 +40,11 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _GrassTexture:
-        m_Texture: {fileID: 2800000, guid: 50594f2a672fea3428b7bc9b7ec51a35, type: 3}
+        m_Texture: {fileID: 2800000, guid: eabd6cc818d5fd84bbdf3ec99e360d6d, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _GroundTexture:
-        m_Texture: {fileID: 2800000, guid: e1fe083ae4da62e44a6321a803a2b7cb, type: 3}
+        m_Texture: {fileID: 2800000, guid: e06e4be68efc34c44aaeb193e6ca6510, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:

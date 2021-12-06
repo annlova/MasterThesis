@@ -121,7 +121,7 @@ Shader "Unlit/GrassShader"
                 float alpha = genAlpha(grassPlanePos);
                 alpha *= mask;
 
-                float3 color = (ambient() + diffuse(input.worldNor)) * getColor(input.st);
+                float3 color = (ambient() + diffuse(input.worldNor)) * getColor(worldPlanePos * 0.1f);
 
                 // To make sure color is between 0 and 1
                 color = clamp(color, zeroVec, oneVec);

@@ -2879,8 +2879,9 @@ namespace TerrainGenerator
                 var isTree = Random.Range(0.0f, 1.0f) <= treeProbability;
                 if (isTree)
                 {
-                    Instantiate(treeCanopyPrefab, p, treeCanopyPrefab.transform.rotation, transform); // TODO
-                    Instantiate(treeTrunkPrefab, p, treeTrunkPrefab.transform.rotation, transform); // TODO
+                    float rotation = Random.Range(0.0f, 359.0f);
+                    Instantiate(treeCanopyPrefab, p, treeCanopyPrefab.transform.rotation * Quaternion.Euler(0.0f, rotation, 0.0f), transform); // TODO
+                    Instantiate(treeTrunkPrefab, p, treeTrunkPrefab.transform.rotation * Quaternion.Euler(0.0f, rotation, 0.0f), transform); // TODO
                 }
                 else
                 {
