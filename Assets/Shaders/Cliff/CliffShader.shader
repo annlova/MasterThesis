@@ -11,7 +11,7 @@ Shader "Unlit/CliffShader"
     }
     SubShader
     {
-        Tags { "Queue"="Transparent" "RenderType"="Transparent" }
+//        Tags { "Queue"="Opaque" "RenderType"="Geometry" }
         Blend SrcAlpha OneMinusSrcAlpha
 
         Pass
@@ -108,6 +108,25 @@ Shader "Unlit/CliffShader"
                 return d;
             }
             ENDHLSL
+        }
+        Pass
+        {
+            Tags{ "LightMode" = "ShadowCaster" }
+            CGPROGRAM
+            #pragma vertex VSMain
+            #pragma fragment PSMain
+ 
+            float4 VSMain (float4 vertex:POSITION) : SV_POSITION
+            {
+                return UnityObjectToClipPos(vertex);
+            }
+ 
+            float4 PSMain (float4 vertex:SV_POSITION) : SV_TARGET
+            {
+                return 0;
+            }
+
+            ENDCG
         }
     }
 }

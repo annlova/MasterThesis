@@ -7,8 +7,6 @@ Shader "Unlit/CalmWaterShader"
         _WaveDisplacementTex ("Displacement texture for calm waves", 2D) = "white" {}
         _WaterTex ("Texture for water (color mainly) 1", 2D) = "white" {}
         _WaterTex2 ("Texture for water (color mainly) 2", 2D) = "white" {}
-        _GlitterTex ("Texture for water glitter", 2D) = "white" {}
-        _GlitterTex2 ("Texture for water glitter", 2D) = "white" {}
         
         _LightColor ("Color of light", Vector) = (1.0, 1.0, 1.0, 1.0)
     }
@@ -56,7 +54,6 @@ Shader "Unlit/CalmWaterShader"
             sampler2D _WaveDisplacementTex;
             sampler2D _WaterTex;
             sampler2D _WaterTex2;
-            sampler2D _GlitterTex;
             
             sampler2D _CameraDepthTexture;
 
@@ -110,7 +107,6 @@ Shader "Unlit/CalmWaterShader"
                 /// Change for more aggressive displacement //
                 float displacementFactor = 0.1f;//0.03f;
                 float displacementFactorWhite = 0.015f;//0.03f;
-                float displacementFactorGlitter = 0.03f;
                 ///
 
                 /// Change for faster scrolling //
@@ -141,27 +137,6 @@ Shader "Unlit/CalmWaterShader"
                 float2 displacedStWaterTex2 =  scrolledStTex1 + getDisplacementVector(displacement, displacementFactor);
                 //
 
-                float2 glitterSt = float2(0, 0);
-                float glitterIndex = floor(fmod(_Time.z*10, 40));
-                glitterSt.x = fmod(glitterIndex, 8);
-                glitterSt.y = floor(glitterIndex / 8);
-                glitterSt /= 8;
-
-                float2 flooredWorldPos = floor(input.worldPos.xz);
-                float2 glitterPos = float2(random2(flooredWorldPos), random2(flooredWorldPos * 300.2));
-                // float2 glitterPos = float2(0.0f, frac(_Time.y));
-                float2 glitterPosSt = (input.st - glitterPos) * 5.0f;
-                // glitterPosSt *= step(float2(0.0f, 0.0f), glitterPosSt) * step(glitterPosSt, float2(1.0f, 1.0f));
-                glitterPosSt.x *= step(0.0f, glitterPosSt.x) * step(glitterPosSt.x, 1.0f);
-                glitterPosSt.y *= step(0.0f, glitterPosSt.y) * step(glitterPosSt.y, 1.0f);
-                glitterSt += glitterPosSt / 8;
-
-                // glitterSt += input.st / 8;
-                glitterSt.y = 1.0 - glitterSt.y;
-                /// Get glitter texture coordinates //
-                float2 displacedStGlitterTex = glitterSt;
-                ///
-
                 /// Sample from textures //
                 float3 tex1Color = tex2D(_CalmWaveTex, displacedStTex1 / 2.0f);
                 float3 tex2Color = tex2D(_CalmWaveTex2, displacedStTex2 / 2.0f);
@@ -170,11 +145,6 @@ Shader "Unlit/CalmWaterShader"
                 // float3 waterColor = tex2D(_WaterTex, displacedStWaterTex1) * clamp(d, 0.5f, 1.0f);
                 float3 waterColor2 = tex2D(_WaterTex2, displacedStWaterTex2) * clamp(d, 0.5f, 1.0f);
                 ///
-
-                float3 glitterProperties = tex2D(_GlitterTex, displacedStGlitterTex);
-                
-                float glitterIntensity = computeGlitterIntensity(glitterProperties);
-                int isGlitter = step(0.0f, glitterIntensity);
                 
                 waterColor = lerp(waterColor, waterColor2, d * 0.3f); // Interpolate water textures
 
@@ -196,9 +166,8 @@ Shader "Unlit/CalmWaterShader"
                 // float3 specular = specularStrength * spec * (1.0f).xxx;
                 // specular = clamp(0.0f, 1.0f, specular);
                 
-                return float4(outColor * min((1 - isWater) + (1- isGlitter), 1)
-                    + waterColor * min((isWater) + (1- isGlitter), 1)
-                    + float3(glitterIntensity, glitterIntensity, glitterIntensity) * isGlitter
+                return float4(outColor * min((1 - isWater), 1)
+                    + waterColor * min(isWater, 1)
                     , 1);
                 // return float4(specular, 1.0f);
             }
@@ -234,32 +203,6 @@ Shader "Unlit/CalmWaterShader"
                 
                 return value * isOpaque1 * isOpaque2;
             }
-
-            float computeGlitterIntensity(float3 glitterProperties)
-            {
-                //float isVisible1 = step(frac(_Time.y), glitterProperties.g * 10); // High threshold
-                //float isVisible2 = step((glitterProperties.g / 20), frac(_Time.y)); // Low threshold
-
-                return glitterProperties.r; //* isVisible1 * isVisible2;
-            }
-
-            float glitterAnimation(float start, float length, float time)
-            {
-                
-            }
-
-            /*
-            float nsin(float rad)
-            {
-                return (sin(rad) + 1) / 2;
-            }
-
-            float sin90(float x)
-            {
-                return frac(x);
-            }
-            */
-            
             
             // Some useful functions
             float3 mod289(float3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
