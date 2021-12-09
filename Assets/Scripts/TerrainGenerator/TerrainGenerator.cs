@@ -338,7 +338,7 @@ namespace TerrainGenerator
                             
                             // Set cliff texture number
                             var mesh = obj.GetComponent<MeshFilter>().mesh;
-                            var uv2 = mesh.uv2;
+                            var uv2 = new Vector2[mesh.vertices.Length];
                             for (int j = 0; j < uv2.Length; j++)
                             {
                                 uv2[j] = new Vector2(tile.cliffTextureNumber, 0.0f);
