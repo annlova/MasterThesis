@@ -1,4 +1,5 @@
 
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace TerrainGenerator
@@ -26,6 +27,11 @@ namespace TerrainGenerator
     public bool riverEastFlowsEast;
     public bool hasRiverSouth;
 
+    public List<Tile> waterfallTiles;
+    public float waterfallTransPosFirst;
+    public float waterfallTransPosLast;
+    public Vector2Int waterfallDir;
+
     public Acre(Vector2Int pos, int elevation)
     {
       this.islandIndex = -1;
@@ -40,6 +46,8 @@ namespace TerrainGenerator
       hasSouthWestCliff = false;
 
       cliffWalked = false;
+
+      waterfallTiles = new List<Tile>();
     }
   }
 }

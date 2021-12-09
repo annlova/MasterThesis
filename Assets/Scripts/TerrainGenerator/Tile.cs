@@ -27,6 +27,7 @@ namespace TerrainGenerator
     public List<Tuple<int, CliffTile>> mergeCliffs;
 
     public bool isRiver;
+    public bool isRiverTransition;
     public bool isRiverEdge;
     public Vector2Int riverEdgeDir;
     public Vector2 riverDir;
@@ -49,6 +50,7 @@ namespace TerrainGenerator
     public int slopeFactor;
 
     public bool isWaterfall;
+    public bool possibleWaterfall;
     
     public bool isBeach;
     

@@ -70,23 +70,23 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _Inflate: 0.2
+    - _Inflate: 0.14
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _Rotate: 0
-    - _Scale: 0.39
+    - _Scale: 0.41
     - _Smoothness: 0.2
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
-    - _WindStrength: 4.8
+    - _WindStrength: 7.2
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 0.44870907, g: 0.9528302, b: 0.24719654, a: 1}
-    - _Diffuse: {r: 0.07843135, g: 0.7921569, b: 0.40255633, a: 1}
+    - _Diffuse: {r: 0.15490389, g: 0.5566038, b: 0.3661175, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _FresnelColor: {r: 0, g: 0.4509804, b: 0.19145644, a: 1}
     - _Specular: {r: 0.07843135, g: 0.7921569, b: 0.12759215, a: 1}

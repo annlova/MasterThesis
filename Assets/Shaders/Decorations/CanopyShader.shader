@@ -146,9 +146,9 @@ Shader "Unlit/CanopyShader"
                 
                 // Rotate
                 float2 uvRotated;
-                float rng = random2(i.vertex.xz) * 360.0f;
-                // float rotation = (sin(_Time.w * 10.0f * rng) + sin(_Time.w + rng)) / 2.0f * _WindStrength * rng;
-                float rotation = _Rotate;
+                float rng = random2(i.vertex.xz);
+                float rotation = (sin(_Time.w * 10.0f * rng) + sin(_Time.w + rng)) / 2.0f * _WindStrength * rng;
+                rotation += _Rotate;
                 // float rotation = _Rotate * rng * 90.0f;
                 Unity_Rotate_Degrees_float(uvRemapped, float2(0.0f, 0.0f), rotation, uvRotated);
 

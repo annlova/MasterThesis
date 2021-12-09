@@ -74,7 +74,7 @@ Shader "Unlit/TileShader"
                 // }
                 // sample the texture
                 float4 ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
-                float4 diffuse = tileColor * dot(i.normal, _WorldSpaceLightPos0);
+                float4 diffuse = tileColor;// * dot(i.normal, _WorldSpaceLightPos0);
                 float4 col = ambient + diffuse;
                 col.a = 1.0f;
                 // float4 spec = 

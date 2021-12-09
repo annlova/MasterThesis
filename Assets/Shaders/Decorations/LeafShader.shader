@@ -55,14 +55,14 @@ Shader "Unlit/LeafShader"
             float4 frag (FragmentAttributes i) : SV_Target
             {
                 // sample the texture
-                float4 sample = tex2D(_MainTex, i.uv);
-                if (sample.a < 0.5f)
-                {
-                    discard;
-                }
+                // float4 sample = tex2D(_MainTex, i.uv);
+                // if (sample.a < 0.5f)
+                // {
+                //     discard;
+                // }
                 float diffuse = dot(_WorldSpaceLightPos0, i.worldNor);
                 float3 col = float3(0.4f, 1.0f, 0.5f) * diffuse;
-                return float4(col, sample.a);
+                return float4(i.uv, 0.0f, 1.0f);
             }
             ENDHLSL
         }

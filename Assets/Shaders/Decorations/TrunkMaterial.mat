@@ -69,7 +69,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - _BumpScale: 1
-    - _ColorMultiplier: 0.5
+    - _ColorMultiplier: 0.23
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0

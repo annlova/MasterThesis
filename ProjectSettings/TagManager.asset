@@ -15,6 +15,7 @@ TagManager:
   - Rock
   - Canopy
   - Trunk
+  - Waterfall
   layers:
   - Default
   - TransparentFX

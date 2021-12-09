@@ -172,6 +172,10 @@ namespace TerrainGenerator
         private GameObject rocksColliderObject;
         private MeshFilter rocksMeshFilter;
         private Renderer rocksRenderer;
+        private GameObject waterfallRenderObject;
+        private GameObject waterfallColliderObject;
+        private MeshFilter waterfallMeshFilter;
+        private Renderer waterfallRenderer;
 
         // Start is called before the first frame update
         void Start()
@@ -191,7 +195,7 @@ namespace TerrainGenerator
             ComputeCliffFloors();
             ComputeRiverMeta();
             ComputeRivers();
-            ComputeSlopes();
+            // ComputeSlopes();
             SpawnDecorations();
             ComputeWaterfalls();
             CreateTerrainMesh();
@@ -316,6 +320,7 @@ namespace TerrainGenerator
         }
 
         private float elevationHeight = 2.0f;
+        private float riverSurfaceOffset = 0.1f;
         private void CreateTerrainMesh()
         {
             for (int z = 0; z < height; z++)
@@ -324,7 +329,7 @@ namespace TerrainGenerator
                 {
                     var tile = tiles[x, z];
                     var riverOffset = tile.isRiver ? 0.7f : 0.0f;
-                    if (tile.isWaterfall)
+                    if (tile.isWaterfall || tile.isRiverTransition)
                     {
                         
                     }
@@ -413,10 +418,10 @@ namespace TerrainGenerator
                                     floorObj.gameObject.tag = "RiverBottom";
                                     roofObj.gameObject.tag = "RiverBottom";
                                     var o1 = Instantiate(riverTilePrefab,
-                                        pFloor + new Vector3(0.0f, riverOffset - 0.1f, 0.0f), Quaternion.identity,
+                                        pFloor + new Vector3(0.0f, riverOffset - riverSurfaceOffset, 0.0f), Quaternion.identity,
                                         transform);
                                     var o2 = Instantiate(riverTilePrefab,
-                                        pRoof + new Vector3(0.0f, riverOffset - 0.1f, 0.0f), Quaternion.identity,
+                                        pRoof + new Vector3(0.0f, riverOffset - riverSurfaceOffset, 0.0f), Quaternion.identity,
                                         transform);
                                     setRiverDirAttribute(tile, o1);
                                     setRiverDirAttribute(tile, o2);
@@ -596,18 +601,18 @@ namespace TerrainGenerator
                             else if (tile.isRiver)
                             {
                                 floorObj.gameObject.tag = "RiverBottom";
-                                var o = Instantiate(riverTilePrefab, p + new Vector3(0.0f, riverOffset - 0.1f, 0.0f), Quaternion.identity, transform);
+                                var o = Instantiate(riverTilePrefab, p + new Vector3(0.0f, riverOffset - riverSurfaceOffset, 0.0f), Quaternion.identity, transform);
                                 setRiverDirAttribute(tile, o);
                             }
                         }
                     }
 
-                    // if (tile.acre.hasRiver)
-                    // {
-                    //     tileValues[x + z * width].x = 0.6f;
-                    //     tileValues[x + z * width].y = 0.6f;
-                    //     tileValues[x + z * width].z = 0.9f;
-                    // }
+                    if (tile.possibleWaterfall)
+                    {
+                        tileValues[x + z * width].x = 1.0f;
+                        tileValues[x + z * width].y = 1.0f;
+                        tileValues[x + z * width].z = 1.0f;
+                    }
                     if (tile.isBeach)
                     {
                         tileValues[x + z * width].x = 0.0f;
@@ -623,9 +628,9 @@ namespace TerrainGenerator
                     }
                     else if (!tile.isCliff && tile.cliffTile != null)
                     {
-                        tileValues[x + z * width].x = 1.0f;
-                        tileValues[x + z * width].y = 1.0f;
-                        tileValues[x + z * width].z = 1.0f;
+                        // tileValues[x + z * width].x = 1.0f;
+                        // tileValues[x + z * width].y = 1.0f;
+                        // tileValues[x + z * width].z = 1.0f;
                     }
                     else if (tile.isMergeCliff)
                     {
@@ -984,6 +989,7 @@ namespace TerrainGenerator
             var combineCanopies = new List<CombineInstance>();
             var combineTrunks = new List<CombineInstance>();
             var combineRocks = new List<CombineInstance>();
+            var combineWaterfall = new List<CombineInstance>();
 
             int i = 0;
             while (i < meshFilters.Length)
@@ -1095,6 +1101,17 @@ namespace TerrainGenerator
                         }
                         combineRocks.Add(rock);
                         break;
+                    case "Waterfall":
+                        var waterfall = new CombineInstance();
+                        waterfall.mesh = meshFilters[i].mesh;
+                        waterfall.transform = meshFilters[i].transform.localToWorldMatrix;
+                        var waterfallCollider = meshFilters[i].gameObject.transform.Find("Collider");
+                        if (waterfallCollider)
+                        {
+                            waterfallCollider.transform.SetParent(rocksColliderObject.transform);
+                        }
+                        combineWaterfall.Add(waterfall);
+                        break;
                     default:
                         i++;
                         continue;
@@ -1154,6 +1171,11 @@ namespace TerrainGenerator
             rocksMeshFilter.sharedMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
             rocksMeshFilter.sharedMesh.CombineMeshes(combineRocks.ToArray());
             rocksMeshFilter.gameObject.SetActive(true);
+
+            waterfallMeshFilter.sharedMesh = new Mesh();
+            waterfallMeshFilter.sharedMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            waterfallMeshFilter.sharedMesh.CombineMeshes(combineWaterfall.ToArray());
+            waterfallMeshFilter.gameObject.SetActive(true);
         }
 
         private void OnDisable()
@@ -1177,6 +1199,8 @@ namespace TerrainGenerator
         private float lastStepTime;
         private WalkAgent currentWalkAgent;
         private int currentIsland;
+
+        private List<Tile> cliffStartTiles;
         
         private void Init()
         {
@@ -1232,6 +1256,11 @@ namespace TerrainGenerator
             rocksMeshFilter = rocksRenderObject.GetComponent<MeshFilter>();
             rocksRenderer = rocksRenderObject.GetComponent<Renderer>();
             
+            waterfallRenderObject = transform.Find("WaterfallRender").gameObject;
+            waterfallColliderObject = transform.Find("WaterfallCollider").gameObject;
+            waterfallMeshFilter = waterfallRenderObject.GetComponent<MeshFilter>();
+            waterfallRenderer = waterfallRenderObject.GetComponent<Renderer>();
+            
             tileValues = new Vector4[width * height];
             for (int i = 0; i < tileValues.Length; i++)
             {
@@ -1242,6 +1271,8 @@ namespace TerrainGenerator
             stepContinuously = false;
             lastStepTime = Time.time;
             currentIsland = 0;
+
+            cliffStartTiles = new List<Tile>();
             
             GenAcres();
             ComputeIslands();
@@ -1624,11 +1655,12 @@ namespace TerrainGenerator
                 throw new InvalidOperationException();
             }
 
+            cliffStartTiles.Add(startTile);
             var agent = new WalkAgent(
                 tiles, width, height,
                 acres, startAcre, acreSize,
                 cliffTiles, maxEat, minEat,
-                maxCliffTextureNumber,
+                maxCliffTextureNumber, riverWidth - 2, //TODO
                 startTile.pos, forward, right,
                 maxCliffWalkReverts
             );
@@ -2177,139 +2209,222 @@ namespace TerrainGenerator
             foreach (var acre in acres)
             {
                 // No river, no waterfall
-                if (!acre.hasRiver)
+                if (acre.waterfallTiles.Count == 0)
                 {
                     continue;
                 }
 
-                // Find first cliff tile
-                var startCliff = FindFirstCliffInAcre(acre);
-                if (startCliff == null)
-                {
-                    // No cliffs, no waterfall
-                    continue;
-                }
-                
-                // Add waterfall if needed
-                if (acre.hasRiverWest && acre.hasWestCliff)
-                {
-                    var westCliffList = new List<Tile>();
-                    var tile = startCliff;
-                    while (tile.cliffDirection == new Vector2Int(0, 1) &&
-                           !tile.isMergeCliff &&
-                           tile.acre == acre)
-                    {
-                        westCliffList.Add(tile);
-                        tile = tile.connectedCliffs[1];
-                    }
-                    
-                    Assert.IsTrue(westCliffList.Count >= riverWidth);
-                    var start = Random.Range(0, westCliffList.Count - riverWidth);
-                    var end = start + riverWidth - 1;
-                    for (int i = start; i <= end; i++)
-                    {
-                        westCliffList[i].isWaterfall = true;
-                    }
-                    
-                    var sTile = westCliffList[start];
-                    var sMesh = sTile.cliffTile.prefab.GetComponent<MeshFilter>().sharedMesh;
-                    var sVerts = sMesh.vertices;
-                    var a = sVerts[0];
-                    var c = sVerts[0];
-                    foreach (var v in sVerts)
-                    {
-                        if (v.z >= a.z && v.y >= a.y)
-                        {
-                            a = v;
-                        }
-                    
-                        if (v.z >= c.z && v.y <= c.y)
-                        {
-                            c = v;
-                        }
-                    }
+                var tiles = acre.waterfallTiles;
 
-                    var eTile = westCliffList[end];
-                    var eMesh = eTile.cliffTile.prefab.GetComponent<MeshFilter>().sharedMesh;
-                    var eVerts = eMesh.vertices;
-                    var b = eVerts[0];
-                    var d = eVerts[0];
-                    foreach (var v in sVerts)
+                var first = tiles[0];
+                var last = tiles[tiles.Count - 1];
+                var firstLastDiff = last.pos - first.pos;
+
+                var transPosFirst = Vector3.zero;
+                var transPosLast = Vector3.zero;
+                var posFirstTop = Vector2Int.zero;
+                var posLastTop = Vector2Int.zero;
+                var posFirstBot = Vector2Int.zero;
+                var posLastBot = Vector2Int.zero;
+                if (acre.waterfallDir.x > 0)
+                {
+                    // EAST
+                    if (first.pos.x < last.pos.x)
                     {
-                        if (v.z <= b.z && v.y >= b.y)
-                        {
-                            b = v;
-                        }
-
-                        if (v.z <= d.z && v.y <= d.y)
-                        {
-                            d = v;
-                        }
-                    }
-
-                    var posDiff = eTile.pos - sTile.pos;
-                    b += new Vector3(posDiff.x, 0.0f, -posDiff.y);
-                    d += new Vector3(posDiff.x, 0.0f, -posDiff.y);
-                    var p = new Vector3(sTile.pos.x, (acre.elevation - 1) * elevationHeight, height - 1 - sTile.pos.y);
-                    CreateWaterfall(a, b, c, d, p);
-                    Debug.Log("West waterfall created!");
-                }
-                else if (acre.hasRiverSouth && acre.hasSouthCliff)
-                {
-                    
-                }
-                else if (acre.hasRiverEast && acre.hasEastCliff)
-                {
-                    
-                }
-            }
-        }
-
-        private void CreateWaterfall(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 p)
-        {
-            var n3d = b - a;
-            var n2d = new Vector2(n3d.z, -n3d.x);
-            n3d = new Vector3(n2d.x, 0.0f, n2d.y);
-
-            var waterfall = Instantiate(waterfallPrefab, p, Quaternion.identity, transform);
-            var mesh = waterfall.GetComponent<MeshFilter>().mesh;
-            var vertices = mesh.vertices;
-            var normals = mesh.normals;
-            Assert.IsTrue(vertices.Length == 4);
-            for (int i = 0; i < vertices.Length; i++)
-            {
-                var v = vertices[i];
-                if (v.x < 0.0f)
-                {
-                    if (v.y > 0.0f)
-                    {
-                        vertices[i] = a;
-                        normals[i] = n3d;
+                        posFirstTop = new Vector2Int(first.pos.x - 1, first.pos.y);
+                        posLastTop = new Vector2Int(first.pos.x - 1, last.pos.y);
+                        posFirstBot = new Vector2Int(last.pos.x + 1, first.pos.y);
+                        posLastBot = new Vector2Int(last.pos.x + 1, last.pos.y);
                     }
                     else
                     {
-                        vertices[i] = c;
-                        normals[i] = n3d;
+                        posFirstTop = new Vector2Int(last.pos.x - 1, first.pos.y);
+                        posLastTop = new Vector2Int(last.pos.x - 1, last.pos.y);  
+                        posFirstBot = new Vector2Int(first.pos.x + 1, first.pos.y);
+                        posLastBot = new Vector2Int(first.pos.x + 1, last.pos.y);                   
+                    }
+                }
+                else if (acre.waterfallDir.x < 0)
+                {
+                    // WEST
+                    if (first.pos.x > last.pos.x)
+                    {
+                        posFirstTop = new Vector2Int(first.pos.x + 1, first.pos.y);
+                        posLastTop = new Vector2Int(first.pos.x + 1, last.pos.y + 1);
+                        posFirstBot = new Vector2Int(last.pos.x, first.pos.y);
+                        posLastBot = new Vector2Int(last.pos.x, last.pos.y + 1);
+                    }
+                    else
+                    {
+                        posFirstTop = new Vector2Int(last.pos.x + 1, first.pos.y);
+                        posLastTop = new Vector2Int(last.pos.x + 1, last.pos.y + 1);       
+                        posFirstBot = new Vector2Int(first.pos.x, first.pos.y);
+                        posLastBot = new Vector2Int(first.pos.x, last.pos.y + 1);           
                     }
                 }
                 else
                 {
-                    if (v.y > 0.0f)
+                    // SOUTH
+                    if (first.pos.y < last.pos.y)
                     {
-                        vertices[i] = b;
-                        normals[i] = n3d;
+                        posFirstTop = new Vector2Int(first.pos.x, first.pos.y - 1);
+                        posLastTop = new Vector2Int(last.pos.x + 1, first.pos.y - 1);
+                        posFirstBot = new Vector2Int(first.pos.x, last.pos.y + 1);
+                        posLastBot = new Vector2Int(last.pos.x + 1, last.pos.y + 1);
                     }
                     else
                     {
-                        vertices[i] = d;
-                        normals[i] = n3d;
+                        posFirstTop = new Vector2Int(first.pos.x, last.pos.y - 1);
+                        posLastTop = new Vector2Int(last.pos.x + 1, last.pos.y - 1);         
+                        posFirstBot = new Vector2Int(first.pos.x, first.pos.y + 1);
+                        posLastBot = new Vector2Int(last.pos.x + 1, first.pos.y + 1);         
+                    }
+                }
+                // Find vertices a, b, c, d of waterfall mesh
+                var a = Vector3.zero;
+                var b = Vector3.zero;
+                var c = Vector3.zero;
+                var d = Vector3.zero;
+                var e = Vector3.zero;
+                var f = Vector3.zero;
+                var g = Vector3.zero;
+                var h = Vector3.zero;
+                var p = new Vector3(first.pos.x + 0.5f, (acre.elevation - 1) * elevationHeight - riverSurfaceOffset, height - 1 - first.pos.y + 0.5f);
+                
+                var firstMesh = first.cliffTile.prefab.GetComponent<MeshFilter>().sharedMesh;
+                var firstVerts = firstMesh.vertices;
+                var firstUvs = firstMesh.uv;
+                for (int i = 0; i < firstMesh.vertexCount; i++)
+                {
+                    var uv = firstUvs[i];
+                    var offsetVector = new Vector3(acre.waterfallDir.x, 0.0f, -acre.waterfallDir.y);
+                    var abc = -acre.waterfallDir * firstLastDiff +
+                              acre.waterfallDir * new Vector2((float) Math.Ceiling(a.x) - a.x, (float) Math.Ceiling(a.y) - a.y) +
+                              acre.waterfallDir;
+                    if (uv.x < 0.5f && uv.y > 0.5f)
+                    {
+                        a = first.cliffTile.prefab.transform.rotation * firstVerts[i];
+                        e = new Vector3(posFirstTop.x, p.y + a.y, height - posFirstTop.y) - p;
+                    }
+                    else if (uv.x < 0.5f && uv.y < 0.5f)
+                    {
+                        c = first.cliffTile.prefab.transform.rotation * firstVerts[i] + Vector3.down * (first.elevation - first.floor - 1) * elevationHeight;
+                        g = new Vector3(posFirstBot.x, p.y + c.y, height - posFirstBot.y) - p;
+                    }
+                }      
+                
+                var lastMesh = last.cliffTile.prefab.GetComponent<MeshFilter>().sharedMesh;
+                var lastVerts = lastMesh.vertices;
+                var lastUvs = lastMesh.uv;
+                for (int i = 0; i < lastMesh.vertexCount; i++)
+                {
+                    var uv = lastUvs[i];
+                    var abc = -acre.waterfallDir * firstLastDiff +
+                              acre.waterfallDir * new Vector2((float) Math.Ceiling(a.x) - a.x, (float) Math.Ceiling(a.y) - a.y) +
+                              acre.waterfallDir;
+                    if (uv.x > 0.5f && uv.y > 0.5f)
+                    {
+                        b = last.cliffTile.prefab.transform.rotation * lastVerts[i];
+                        b += new Vector3(firstLastDiff.x, 0.0f, -firstLastDiff.y);
+                        f = new Vector3(posLastTop.x, p.y + b.y, height - posLastTop.y) - p;
+                    }
+                    else if (uv.x > 0.5f && uv.y < 0.5f)
+                    {
+                        d = last.cliffTile.prefab.transform.rotation * lastVerts[i] + Vector3.down * (last.elevation - last.floor - 1) * elevationHeight;
+                        d += new Vector3(firstLastDiff.x, 0.0f, -firstLastDiff.y);
+                        h = new Vector3(posLastBot.x, p.y + d.y, height - posLastBot.y) - p;
+                    }
+                }
+                
+                CreateWaterfall(a, b, c, d, e, f, g, h, p);
+                // Debug.Log("Waterfall! Width = " + waterfallWidth + ". start = " + start + ". end = " + end);
+            }
+        }
+
+        private void CreateWaterfall(Vector3 a, Vector3 b, Vector3 c, Vector3 d, 
+                                    Vector3 e, Vector3 f, Vector3 g, Vector3 h, Vector3 p)
+        {
+            var n3d = b - a;
+            var n2d = new Vector2(n3d.z, -n3d.x);
+            n3d = new Vector3(n2d.x, 0.0f, n2d.y).normalized;
+            var angle = (float) (Math.Acos(Vector3.Dot(Vector3.back, n3d)) / (2.0 * Math.PI)) * 360.0f;
+            if (n3d.x > 0.0f)
+            {
+                angle = -angle;
+            }
+            var rotation = Quaternion.AngleAxis(angle, Vector3.up);
+            
+            var waterfall = Instantiate(waterfallPrefab, p, Quaternion.identity, transform);
+            var mesh = waterfall.GetComponent<MeshFilter>().mesh;
+            var vertices = mesh.vertices;
+            var normals = mesh.normals;
+            // Assert.IsTrue(vertices.Length == 8);
+            for (var i = 0; i < vertices.Length; i++)
+            {
+                var v = vertices[i];
+                if (Math.Abs(v.z) < 0.5f)
+                {
+                    if (v.x < 0.0f)
+                    {
+                        if (v.y > 0.0f)
+                        {
+                            vertices[i] = a - new Vector3(0.0f, 0.5f - v.y, 0.0f) + rotation * new Vector3(0.0f, 0.0f, v.z);
+                            normals[i] = rotation * normals[i];
+                        }
+                        else
+                        {
+                            vertices[i] = c + new Vector3(0.0f, 0.5f + v.y, 0.0f) + rotation * new Vector3(0.0f, 0.0f, v.z);;
+                            normals[i] = rotation * normals[i];
+                        }
+                    }
+                    else
+                    {
+                        if (v.y > 0.0f)
+                        {
+                            vertices[i] = b - new Vector3(0.0f, 0.5f - v.y, 0.0f) + rotation * new Vector3(0.0f, 0.0f, v.z);;
+                            normals[i] = rotation * normals[i];
+                        }
+                        else
+                        {
+                            vertices[i] = d + new Vector3(0.0f, 0.5f + v.y, 0.0f) + rotation * new Vector3(0.0f, 0.0f, v.z);;
+                            normals[i] = rotation * normals[i];
+                        }
+                    }
+                }
+                else
+                {
+                    if (v.x < 0.0f)
+                    {
+                        if (v.y > 0.0f)
+                        {
+                            vertices[i] = e;
+                            normals[i] = Vector3.up;
+                        }
+                        else
+                        {
+                            vertices[i] = g;
+                            normals[i] = Vector3.up;
+                        }
+                    }
+                    else
+                    {
+                        if (v.y > 0.0f)
+                        {
+                            vertices[i] = f;
+                            normals[i] = Vector3.up;
+                        }
+                        else
+                        {
+                            vertices[i] = h;
+                            normals[i] = Vector3.up;
+                        }
                     }
                 }
             }
 
             mesh.vertices = vertices;
-            
-            
+            mesh.normals = normals;
+
         }
 
         private Tile FindFirstCliffInAcre(Acre acre)
@@ -2445,10 +2560,17 @@ namespace TerrainGenerator
                             {
                                 var p = new Vector2Int(pos.x + x, pos.y + acreSize / 2 - riverWidth / 2 + y);
                                 var t = tiles[p.x, p.y];
-                                if (t.isRiver)
+                                if (t.isRiver || t.isWaterfall)
                                 {
                                     continue;
                                 }
+                                
+                                bool waterfallTransition = false;
+                                if (p.x > 0)
+                                {
+                                    waterfallTransition = tiles[p.x - 1, p.y].isWaterfall;
+                                }
+                                
                                 if (y == 0)
                                 {
                                     t.isRiverEdge = true;
@@ -2461,6 +2583,30 @@ namespace TerrainGenerator
                                 }
                                 else
                                 {
+                                    var waterfallRow = false;
+                                    for (var i = 1; i < riverWidth - 1; i++)
+                                    {
+                                        var pp = new Vector2Int(pos.x + x, pos.y + acreSize / 2 - riverWidth / 2 + i);
+                                        var ttt = tiles[pp.x, pp.y];
+                                        var tt = ttt;
+                                        if (x > 0)
+                                        {
+                                            tt = tiles[pp.x - 1, pp.y];
+                                        }
+
+                                        if (tt.isWaterfall || ttt.isWaterfall)
+                                        {
+                                            waterfallRow = true;
+                                        }
+                                    }
+
+                                    if (waterfallRow)
+                                    {
+                                        t.isRiverTransition = true;
+                                        continue;
+                                    }
+                                    
+                                    // t.isRiverTransition = waterfallTransition;
                                     t.isRiver = true;
                                     t.isRiverEdge = false;
                                     t.riverDir = t.acre.riverWestFlowsWest ? Vector2.left : Vector2.right;
@@ -2477,10 +2623,17 @@ namespace TerrainGenerator
                             {
                                 var p = new Vector2Int(pos.x + x, pos.y + acreSize / 2 - riverWidth / 2 + y);
                                 var t = tiles[p.x, p.y];
-                                if (t.isRiver)
+                                if (t.isRiver || t.isWaterfall)
                                 {
                                     continue;
                                 }
+                                
+                                bool waterfallTransition = false;
+                                if (p.x < width - 1)
+                                {
+                                    waterfallTransition = tiles[p.x + 1, p.y].isWaterfall;
+                                }
+                                
                                 if (y == 0)
                                 {
                                     t.isRiverEdge = true;
@@ -2493,6 +2646,31 @@ namespace TerrainGenerator
                                 }
                                 else
                                 {
+                                    var waterfallRow = false;
+                                    for (var i = 1; i < riverWidth - 1; i++)
+                                    {
+                                        var pp = new Vector2Int(pos.x + x, pos.y + acreSize / 2 - riverWidth / 2 + i);
+                                        var ttt = tiles[pp.x, pp.y];
+                                        var tt = ttt;
+                                        if (x < acreSize - 1)
+                                        {
+                                            tt = tiles[pp.x + 1, pp.y];
+                                        }
+
+                                        if (tt.isWaterfall || ttt.isWaterfall)
+                                        {
+                                            waterfallRow = true;
+                                            break;
+                                        }
+                                    }
+
+                                    if (waterfallRow)
+                                    {
+                                        t.isRiverTransition = true;
+                                        continue;
+                                    }
+                                    
+                                    // t.isRiverTransition = waterfallTransition;
                                     t.isRiver = true;
                                     t.isRiverEdge = false;
                                     t.riverDir = t.acre.riverEastFlowsEast ? Vector2.right : Vector2.left;
@@ -2509,10 +2687,12 @@ namespace TerrainGenerator
                             {
                                 var p = new Vector2Int(pos.x + acreSize / 2 - riverWidth / 2 + x, pos.y + y);
                                 var t = tiles[p.x, p.y];
+
                                 if (t.isRiver)
                                 {
                                     continue;
                                 }
+
                                 if (x == 0)
                                 {
                                     tiles[p.x, p.y].isRiverEdge = true;
@@ -2525,6 +2705,30 @@ namespace TerrainGenerator
                                 }
                                 else
                                 {
+                                    var waterfallRow = false;
+                                    for (var i = 1; i < riverWidth - 1; i++)
+                                    {
+                                        var pp = new Vector2Int(pos.x + acreSize / 2 - riverWidth / 2 + i, pos.y + y);
+                                        var ttt = tiles[pp.x, pp.y];
+                                        var tt = ttt;
+                                        if (y < acreSize - 1)
+                                        {
+                                            tt = tiles[pp.x, pp.y + 1];
+                                        }
+
+                                        if (tt.isWaterfall || ttt.isWaterfall)
+                                        {
+                                            waterfallRow = true;
+                                            break;
+                                        }
+                                    }
+
+                                    if (waterfallRow)
+                                    {
+                                        t.isRiverTransition = true;
+                                        continue;
+                                    }
+                                    
                                     tiles[p.x, p.y].isRiver = true;
                                     tiles[p.x, p.y].isRiverEdge = false;
                                     tiles[p.x, p.y].riverDir = Vector2.down;

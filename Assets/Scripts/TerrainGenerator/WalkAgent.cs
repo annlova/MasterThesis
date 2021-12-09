@@ -37,11 +37,13 @@ namespace TerrainGenerator
 
     private readonly int maxCliffWalkReverts;
     private int numReverts;
+
+    private readonly int riverWidth;
     
     public WalkAgent(Tile[,] tiles, int width, int height,
                      Acre[,] acres, Acre startAcre, int acreSize,
                      CliffTile[] cliffTiles, int maxCliffEat, int minCliffEat,
-                     int maxCliffTextureNumber,
+                     int maxCliffTextureNumber, int riverWidth,
                      Vector2Int pos, Vector2Int forward, Vector2Int right,
                      int maxCliffWalkReverts)
     {
@@ -73,6 +75,8 @@ namespace TerrainGenerator
 
       this.maxCliffWalkReverts = maxCliffWalkReverts;
       numReverts = 0;
+
+      this.riverWidth = riverWidth;
     }
 
     public void Step()
@@ -174,18 +178,62 @@ namespace TerrainGenerator
           }
         } while (!ruleFound);
 
-        if (ruleFound && IsOutsideMap(trialPos + forward))
+        if (ruleFound && IsOutsideMap(trialPos + forward) && cliffElevation > 0)
         {
            ruleFound = cliffTiles[rule.index].isEndTile;
         }
         
         if (ruleFound)
         {
+          var tile = tiles[trialPos.x, trialPos.y];
+          // Check if tile is possible waterfall
+          var acreTileX = trialPos.x % acreSize;
+          var acreTileY = trialPos.y % acreSize;
+          var possibleWaterfall = false;
+          if (cliffElevation == tile.acre.elevation)
+          {
+            if (forward == Vector2Int.up) // DOWN
+            {
+              if (tile.acre.hasRiver &&
+                  tile.acre.hasRiverWest &&
+                  tile.acre.riverWestFlowsWest &&
+                  tile.acre.hasWestCliff &&
+                  acreTileY > acreSize / 2 - (int) Math.Ceiling(riverWidth / 2.0f) &&
+                  acreTileY <= acreSize / 2 + riverWidth / 2)
+              {
+                possibleWaterfall = true;
+              }
+            }
+            else if (forward == Vector2Int.right)
+            {
+              if (tile.acre.hasRiver &&
+                  tile.acre.hasRiverSouth &&
+                  tile.acre.hasSouthCliff &&
+                  acreTileX > acreSize / 2 - (int) Math.Ceiling(riverWidth / 2.0f) &&
+                  acreTileX <= acreSize / 2 + riverWidth / 2)
+              {
+                possibleWaterfall = true;
+              }
+            }
+            else if (forward == Vector2Int.down) // UP
+            {
+              if (tile.acre.hasRiver &&
+                  tile.acre.hasRiverEast &&
+                  tile.acre.riverEastFlowsEast &&
+                  tile.acre.hasEastCliff &&
+                  acreTileY > acreSize / 2 - (int) Math.Ceiling(riverWidth / 2.0f) &&
+                  acreTileY <= acreSize / 2 + riverWidth / 2)
+              {
+                possibleWaterfall = true;
+              }
+            }
+          }
+          
           prevStep.tries = tries;
           prevStep.selectedRule = selectedRule;
         
-          bool setCliffWalked = !tiles[trialPos.x, trialPos.y].acre.cliffWalked &&
-                                tiles[trialPos.x, trialPos.y].acre.elevation == cliffElevation;
+          bool setCliffWalked = !tile.acre.cliffWalked &&
+                                tile.acre.elevation == cliffElevation;
 
           // Check if direction needs to be updated
           (var nextForward, var nextRight) = ComputeDirection(pos, trialPos);
@@ -196,7 +244,8 @@ namespace TerrainGenerator
               cliffTiles[rule.index],
               cliffElevation,
               setCliffWalked,
-              tiles[pos.x, pos.y]
+              tiles[pos.x, pos.y],
+              possibleWaterfall
             )
           );
           
@@ -204,7 +253,7 @@ namespace TerrainGenerator
           steps.Peek().apply();
           
           // Check if done (map edge reached)
-          if (IsOutsideMap(pos + forward))
+          if (IsOutsideMap(pos + forward) && cliffElevation > 0)
           {
             done = true;
             return;
@@ -309,7 +358,7 @@ namespace TerrainGenerator
             new Vector2Int(right.x, right.y),
             tiles[pos.x, pos.y], cliffTiles[cliffTileIndex], cliffElevation,
             tiles[pos.x, pos.y].acre.elevation == cliffElevation,
-            mergeTile
+            mergeTile, false
             )
           );
     }
@@ -461,12 +510,14 @@ namespace TerrainGenerator
       private readonly int elevation;
 
       private readonly bool setCliffWalked;
+      private readonly bool possibleWaterfall;
+      private readonly bool possibleWaterfallBefore;
 
       public int tries;
       public int selectedRule;
       
-      public WalkStep(WalkAgent agent, Vector2Int pos, Vector2Int forward, Vector2Int right, Tile tile, CliffTile cliffTile, int elevation,
-                      bool setCliffWalked, Tile connectedCliff)
+      public WalkStep(WalkAgent agent, Vector2Int pos, Vector2Int forward, Vector2Int right, Tile tile, CliffTile cliffTile, int elevation, 
+                      bool setCliffWalked, Tile connectedCliff, bool possibleWaterfall)
       {
         this.agent = agent;
         posBefore = agent.pos; 
@@ -481,6 +532,9 @@ namespace TerrainGenerator
         this.cliffTile = cliffTile;
         this.elevation = elevation;
         this.setCliffWalked = setCliffWalked;
+
+        possibleWaterfallBefore = tile.possibleWaterfall;
+        this.possibleWaterfall = possibleWaterfall;
         
         tries = 0;
         selectedRule = -1;
@@ -500,6 +554,15 @@ namespace TerrainGenerator
         {
           tile.isBeachCliff = true;
         }
+
+        tile.possibleWaterfall = possibleWaterfall;
+        if (possibleWaterfall)
+        {
+          tile.acre.waterfallTiles.Add(tile);
+          tile.acre.waterfallDir = agent.right;
+          tile.isWaterfall = true;
+        }
+        
         tile.elevation = elevation;
         if (setCliffWalked)
         {
@@ -527,6 +590,12 @@ namespace TerrainGenerator
         tile.cliffTile = null;
         tile.isCliff = false;
         tile.isBeachCliff = false;
+        tile.possibleWaterfall = possibleWaterfallBefore;
+        if (!possibleWaterfallBefore)
+        {
+          tile.acre.waterfallTiles.Remove(tile);
+          tile.isWaterfall = false;
+        }
         tile.elevation = tile.acre.elevation;
         if (setCliffWalked)
         {
