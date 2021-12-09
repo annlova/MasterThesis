@@ -27,6 +27,7 @@ Shader "Unlit/TrunkShader"
                 float2 uv : TEXCOORD0;
                 float4 tan : TANGENT;
                 float3 nor : NORMAL;
+                float2 rng : TEXCOORD1;
             };
 
             struct FragmentAttributes
@@ -37,6 +38,7 @@ Shader "Unlit/TrunkShader"
                 float2 st : TEXCOORD1;
                 float3x3 tbn : MATRIX;
                 float3 nor : NORMAL;
+                float rng : RANDOM;
             };
 
             sampler2D _MainTex;
@@ -82,6 +84,8 @@ Shader "Unlit/TrunkShader"
                 output.nor = UnityObjectToWorldNormal(input.nor);
 
                 output.st = input.uv;
+
+                output.rng = input.rng.x;
                 
                 return output;
             }
@@ -106,8 +110,9 @@ Shader "Unlit/TrunkShader"
                 float spec = pow(max(dot(cameraDir, reflectDir), 0.0f), 32);
                 float3 specular = specularStrength * spec * (1.0f).xxx;
 
-                color = gradient;
-
+                color = color + gradient;
+                color *= lerp(0.5f, 1.2f, input.rng);
+                
                 float ambient = 0.0f;
                 float diff = diffuse(normal, _WorldSpaceLightPos0);
                 float3 outColor = color * (ambient + diff) * _ColorMultiplier;

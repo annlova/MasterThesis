@@ -93,11 +93,17 @@ namespace Player
                 _gravitySpeed = _gravitySpeed.normalized * terminalVelocity;
             }
             var flag = _controller.Move(_gravitySpeed * Time.deltaTime);
-            if (flag != CollisionFlags.None)
+            if (flag != CollisionFlags.None || _controller.transform.position.y <= -0.3f)
             {
+                if (_controller.transform.position.y < -0.3f)
+                {
+                    _controller.enabled = false;
+                    var pos = transform.position;
+                    transform.position = new Vector3(pos.x, -0.3f, pos.z);
+                    _controller.enabled = true;
+                }
                 _gravitySpeed.Set(0.0f, 0.0f, 0.0f);
             }
-        
             // Rotate character
             transform.Rotate(Vector3.up, angleRotated);
         }

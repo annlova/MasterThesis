@@ -415,12 +415,12 @@ ParticleSystem:
   m_GameObject: {fileID: 405231427}
   serializedVersion: 7
   lengthInSec: 2
-  simulationSpeed: 1
+  simulationSpeed: 2
   stopAction: 0
   cullingMode: 0
   ringBufferMode: 0
   ringBufferLoopRange: {x: 0, y: 1}
-  looping: 0
+  looping: 1
   prewarm: 0
   playOnAwake: 1
   useUnscaledTime: 0
@@ -1033,13 +1033,13 @@ ParticleSystem:
   ShapeModule:
     serializedVersion: 6
     enabled: 1
-    type: 4
+    type: 18
     angle: 25
     length: 5
     boxThickness: {x: 0, y: 0, z: 0}
     radiusThickness: 1
     donutRadius: 0.2
-    m_Position: {x: 0, y: 0, z: 0}
+    m_Position: {x: 0, y: 0, z: 0.01}
     m_Rotation: {x: 0, y: 0, z: 0}
     m_Scale: {x: 1, y: 1, z: 1}
     placementMode: 0
@@ -1108,7 +1108,7 @@ ParticleSystem:
     m_SpriteRenderer: {fileID: 0}
     m_UseMeshMaterialIndex: 0
     m_UseMeshColors: 1
-    alignToDirection: 0
+    alignToDirection: 1
     m_Texture: {fileID: 0}
     m_TextureClipChannel: 3
     m_TextureClipThreshold: 0
@@ -1239,7 +1239,7 @@ ParticleSystem:
     rateOverTime:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 1
+      scalar: 0.05
       minScalar: 10
       maxCurve:
         serializedVersion: 2
@@ -5119,13 +5119,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 405231427}
-  m_LocalRotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071068}
+  m_LocalRotation: {x: 0.7071068, y: -0, z: -0, w: -0.7071068}
   m_LocalPosition: {x: 21.59, y: 0.23, z: -52.67}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 25
-  m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 270, y: 0, z: 0}
 --- !u!1 &437454033
 GameObject:
   m_ObjectHideFlags: 0
@@ -5634,7 +5634,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 0b028750df5762747b7ed928e7e61cc0, type: 2}
+  - {fileID: 2100000, guid: 202f216ede637684b804b85fdc002771, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -7223,7 +7223,7 @@ MonoBehaviour:
   maxBeachCliffEat: 5
   minBeachCliffEat: 0
   maxCliffTextureNumber: 6
-  numRivers: 2
+  numRivers: 3
   riverWidth: 5
   slopeWidth: 5
   slopeLength: 6
@@ -10238,6 +10238,8 @@ MonoBehaviour:
   treeCanopyPrefab: {fileID: 5130703439827060962, guid: 690b32e21fb6fd24aa1a9a2cebec6b54, type: 3}
   treeTrunkPrefab: {fileID: 7892580480987733543, guid: 819adb4722c60b94591902b80aff634a, type: 3}
   rockPrefab: {fileID: 2235921654663849865, guid: 7804eaa8ea94e0f45946ff99535053f3, type: 3}
+  waterFallMistEmitter: {fileID: 1744689490}
+  sparkleEmitter: {fileID: 405231427}
 --- !u!4 &1595967272
 Transform:
   m_ObjectHideFlags: 0

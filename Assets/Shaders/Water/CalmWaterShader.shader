@@ -96,6 +96,7 @@ Shader "Unlit/CalmWaterShader"
 
             float4 frag (FragmentAttributes input) : SV_Target
             {
+                input.dir = -input.dir;
                 /// To calculate depth //
                 float2 uv = input.screenPos.xy / input.screenPos.w;
                 float depth = 1.0f - SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, uv);
@@ -110,11 +111,11 @@ Shader "Unlit/CalmWaterShader"
                 ///
 
                 /// Change for faster scrolling //
-                float timeFactor = _Time.y / 10;
+                float timeFactor = _Time.y / 15;
                 ///
 
                 /// Scrolling texture thresholds //
-                float higherThresholdWaves = 0.75f;//1.0f;
+                float higherThresholdWaves = 0.70f;//1.0f;
                 float lowerThresholdWaves = 0.68f;
                 ///
 
@@ -146,7 +147,7 @@ Shader "Unlit/CalmWaterShader"
                 float3 waterColor2 = tex2D(_WaterTex2, displacedStWaterTex2) * clamp(d, 0.5f, 1.0f);
                 ///
                 
-                waterColor = lerp(waterColor, waterColor2, d * 0.3f); // Interpolate water textures
+                waterColor = lerp(waterColor, waterColor2, d * 0.6f); // Interpolate water textures
 
                 float3 outColor = tex1Color + tex2Color; // Add together wave textures
                 
@@ -165,7 +166,9 @@ Shader "Unlit/CalmWaterShader"
                 // float spec = pow(max(displacement.r+0.2, 0.0f), 32);
                 // float3 specular = specularStrength * spec * (1.0f).xxx;
                 // specular = clamp(0.0f, 1.0f, specular);
-                
+
+                // return float4(waterColor2, 1.0f);
+                return float4(lerp(waterColor2, waterColor2 * 1.5f, alpha) * float3(0.3f, 0.99f, 1.2f), 1.0f);
                 return float4(outColor * min((1 - isWater), 1)
                     + waterColor * min(isWater, 1)
                     , 1);

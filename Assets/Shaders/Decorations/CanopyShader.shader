@@ -39,6 +39,7 @@ Shader "Unlit/CanopyShader"
                 float4 vertex : POSITION;
                 float3 normal : NORMAL;
                 float2 uv : TEXCOORD0;
+                float2 rng : TEXCOORD1;
             };
 
             struct FragmentAttributes
@@ -47,6 +48,7 @@ Shader "Unlit/CanopyShader"
                 float4 vertex : SV_POSITION;
                 float4 worldPos : TEXCOORD1;
                 float3 worldNor : NORMAL;
+                float rng : RANDOM;
             };
 
             sampler2D _MainTex;
@@ -211,6 +213,9 @@ Shader "Unlit/CanopyShader"
                 float4 localPos = i.vertex + float4(offset, 0.0f);
                 o.worldPos = mul(localPos, unity_ObjectToWorld);
                 o.vertex = UnityObjectToClipPos(localPos);
+
+                o.rng = i.rng.x;
+                
                 return o;
             }
 
@@ -229,21 +234,27 @@ Shader "Unlit/CanopyShader"
                 
                 // Diffuse term
                 float diffuse = dot(i.worldNor, _WorldSpaceLightPos0);
-
+                // Randomize diffuse color
+                float3 diffuseColor = _Diffuse * lerp(0.5f, 1.5f, i.rng);
+                
                 // Specular term
                 float specularStrength = _Smoothness;
                 float3 reflectDir = reflect(-_WorldSpaceLightPos0.xyz, i.worldNor);
                 float spec = pow(max(dot(viewDir, reflectDir), 0.0f), 32) * specularStrength;
-                
+                // Randomize specular color
+                float3 specularColor = _Specular * lerp(0.5f, 1.0f, i.rng);
+
                 // Fresnel term
                 float fresnel;
                 Unity_FresnelEffect_float(i.worldNor, viewDir, _FresnelPower, fresnel);
+                // Randomize fresnel color
+                float3 fresnelColor = _FresnelColor * lerp(0.5f, 1.0f, i.rng);
 
                 // Color randomizer
                 float3 colorRandomizer = tex2D(_ColorRandomizer, i.uv).rgb;
                 
                 // Final Color
-                float3 color = _Diffuse * diffuse + _Specular * spec + fresnel * _FresnelColor;
+                float3 color = diffuseColor * diffuse + specularColor * spec + fresnelColor * fresnel;
                 color *= colorRandomizer;
                 
                 return float4(color, 1.0f);

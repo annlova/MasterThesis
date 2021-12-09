@@ -14,6 +14,7 @@ namespace Camera
         {
             camera = GetComponentInParent<UnityEngine.Camera>();
             riverRenderer = GameObject.Find("TerrainGenerator").transform.Find("RiversRender").GetComponent<Renderer>();
+            waterfallRenderer = GameObject.Find("TerrainGenerator").transform.Find("WaterfallRender").GetComponent<Renderer>();
             
             offset = new Vector3(0, 5.9f, -3.76f);     // Distance from player character
             angle = 51;                                     // Camera angle
@@ -25,12 +26,15 @@ namespace Camera
 
         private UnityEngine.Camera camera;
         private Renderer riverRenderer;
+        private Renderer waterfallRenderer;
         private void OnPreRender()
         {
             var projInv = (camera.projectionMatrix).inverse;
             var viewInv = (camera.worldToCameraMatrix).inverse;
             riverRenderer.sharedMaterial.SetMatrix("_ProjInverse", projInv);
             riverRenderer.sharedMaterial.SetMatrix("_ViewInverse", viewInv);
+            waterfallRenderer.sharedMaterial.SetMatrix("_ProjInverse", projInv);
+            waterfallRenderer.sharedMaterial.SetMatrix("_ViewInverse", viewInv);
         }
         
         /// <summary>

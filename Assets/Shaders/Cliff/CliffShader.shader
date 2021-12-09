@@ -88,12 +88,15 @@ Shader "Unlit/CliffShader"
                 float3 nmap2 = tex2D(_NMap2, calculateTextureUV(input.st, input.cliffTextureNumber, 3.0)).rgb;
                 float3 nmap3 = tex2D(_NMap3, calculateTextureUV(input.st, input.cliffTextureNumber, 6.0)).rgb;
                 float3 nmap4 = tex2D(_NMap4, calculateTextureUV(input.st, input.cliffTextureNumber, 3.0)).rgb;
-                float3 normal = normalize(mul(input.tbn, nmap * (1 - isCleff) + nmap2 + nmap3 + nmap4));
+                float3 nnn = nmap + nmap4;
+                float3 normal = normalize(mul(input.tbn, nnn));
                 // float3 normal = normalize(mul(input.tbn, nmap + nmap2 + nmap3 + nmap4));
 
                 float ambient = 0.0f;
                 float3 outColor = color * (ambient + diffuse(normal, _WorldSpaceLightPos0));
-                
+
+                float d = dot(_WorldSpaceLightPos0, normal);
+                outColor = float3(0.3, 0.3f, 0.3f) * (d * d + 0.2f);
                 return float4(outColor, 1.0f);
             }
 
