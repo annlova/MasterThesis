@@ -78,7 +78,7 @@ Shader "Unlit/WaterFallShader"
                 output.st = input.uv;
 
                 // Calm water shader vert
-                output.dir = float2(0.0f, 0.0f);
+                output.dir = float2(0.0f, 1.0f);
                 output.screenPos = ComputeScreenPos(output.clipPos);
                 
                 return output;
@@ -139,7 +139,7 @@ Shader "Unlit/WaterFallShader"
                 ///
 
                 /// Change for faster scrolling //
-                float timeFactor = _Time.y / 10;
+                float timeFactor = _Time.y / 15;
                 ///
 
                 /// Scrolling texture thresholds //

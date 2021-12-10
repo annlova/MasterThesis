@@ -327,6 +327,7 @@ namespace TerrainGenerator
 
         private float elevationHeight = 2.0f;
         private float riverSurfaceOffset = 0.1f;
+        private float bottomRiverOffset = 0.7f;
         private void CreateTerrainMesh()
         {
             for (int z = 0; z < height; z++)
@@ -334,7 +335,7 @@ namespace TerrainGenerator
                 for (int x = 0; x < width; x++)
                 {
                     var tile = tiles[x, z];
-                    var riverOffset = tile.isRiver ? 0.7f : 0.0f;
+                    var riverOffset = tile.isRiver ? bottomRiverOffset : 0.0f;
                     if (tile.isWaterfall || tile.isRiverTransition)
                     {
                         
@@ -2364,9 +2365,14 @@ namespace TerrainGenerator
             var rotation = Quaternion.AngleAxis(angle, Vector3.up);
             
             var waterfall = Instantiate(waterfallPrefab, p, Quaternion.identity, transform);
+            var waterfallBottom = Instantiate(waterfallPrefab, p - new Vector3(0.0f, bottomRiverOffset, 0.0f), Quaternion.identity, transform);
+            waterfallBottom.tag = "RiverBottom";
             var mesh = waterfall.GetComponent<MeshFilter>().mesh;
             var vertices = mesh.vertices;
             var normals = mesh.normals;
+            var bottomMesh = waterfallBottom.GetComponent<MeshFilter>().mesh;
+            var verticesBottom = bottomMesh.vertices;
+            var normalsBottom = bottomMesh.normals;
             // Assert.IsTrue(vertices.Length == 8);
             for (var i = 0; i < vertices.Length; i++)
             {
@@ -2379,11 +2385,15 @@ namespace TerrainGenerator
                         {
                             vertices[i] = a - new Vector3(0.0f, 0.5f - v.y, 0.0f) + rotation * new Vector3(0.0f, 0.0f, v.z);
                             normals[i] = rotation * normals[i];
+                            verticesBottom[i] = vertices[i] + rotation * new Vector3(0.0f, 0.0f, bottomRiverOffset);
+                            normalsBottom[i] = normals[i];
                         }
                         else
                         {
                             vertices[i] = c + new Vector3(0.0f, 0.5f + v.y, 0.0f) + rotation * new Vector3(0.0f, 0.0f, v.z);;
                             normals[i] = rotation * normals[i];
+                            verticesBottom[i] = vertices[i];
+                            normalsBottom[i] = normals[i];
                         }
                     }
                     else
@@ -2392,11 +2402,15 @@ namespace TerrainGenerator
                         {
                             vertices[i] = b - new Vector3(0.0f, 0.5f - v.y, 0.0f) + rotation * new Vector3(0.0f, 0.0f, v.z);;
                             normals[i] = rotation * normals[i];
+                            verticesBottom[i] = vertices[i];
+                            normalsBottom[i] = normals[i];
                         }
                         else
                         {
                             vertices[i] = d + new Vector3(0.0f, 0.5f + v.y, 0.0f) + rotation * new Vector3(0.0f, 0.0f, v.z);;
                             normals[i] = rotation * normals[i];
+                            verticesBottom[i] = vertices[i];
+                            normalsBottom[i] = normals[i];
                         }
                     }
                 }
@@ -2408,11 +2422,15 @@ namespace TerrainGenerator
                         {
                             vertices[i] = e;
                             normals[i] = Vector3.up;
+                            verticesBottom[i] = vertices[i];
+                            normalsBottom[i] = normals[i];
                         }
                         else
                         {
                             vertices[i] = g;
                             normals[i] = Vector3.up;
+                            verticesBottom[i] = vertices[i];
+                            normalsBottom[i] = normals[i];
                         }
                     }
                     else
@@ -2421,11 +2439,15 @@ namespace TerrainGenerator
                         {
                             vertices[i] = f;
                             normals[i] = Vector3.up;
+                            verticesBottom[i] = vertices[i];
+                            normalsBottom[i] = normals[i];
                         }
                         else
                         {
                             vertices[i] = h;
                             normals[i] = Vector3.up;
+                            verticesBottom[i] = vertices[i];
+                            normalsBottom[i] = normals[i];
                         }
                     }
                 }
@@ -2433,6 +2455,8 @@ namespace TerrainGenerator
 
             mesh.vertices = vertices;
             mesh.normals = normals;
+            bottomMesh.vertices = verticesBottom;
+            bottomMesh.normals = normalsBottom;
 
             var mistPos = Vector3.Lerp(c, d, 0.5f) + p;
             Instantiate(waterFallMistEmitter, mistPos, waterFallMistEmitter.transform.rotation, transform);

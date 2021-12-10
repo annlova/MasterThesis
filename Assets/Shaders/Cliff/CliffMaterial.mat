@@ -60,7 +60,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _NMap2:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 2f45a7f1dca439d4ab9777c45beba3ad, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _NMap3:
@@ -68,7 +68,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _NMap4:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: a78e57b80e8a58a4a98f057ba8fd0e12, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _NormMap:
