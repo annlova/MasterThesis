@@ -5,7 +5,8 @@ Shader "Unlit/GenericSandShader"
         _MainTex ("Texture", 2D) = "white" {}
         _NormMap ("Normal map", 2D) = "white" {}
         _GradientMap ("Gradient map", 2D) = "white" {}
-        _RoughnessMap ("Roughness map", 2D) = "white" {}
+        _RoughnessMapWet ("Roughness map wet", 2D) = "white" {}
+        _RoughnessMapDry ("Roughness map dry", 2D) = "white" {}
     }
     SubShader
     {
@@ -41,7 +42,8 @@ Shader "Unlit/GenericSandShader"
             sampler2D _MainTex;
             sampler2D _NormMap;
             sampler2D _GradientMap;
-            sampler2D _RoughnessMap;
+            sampler2D _RoughnessMapWet;
+            sampler2D _RoughnessMapDry;
 
             FragmentAttributes vert (VertexAttributes input)
             {
@@ -93,24 +95,27 @@ Shader "Unlit/GenericSandShader"
                 // normal = input.nor;
                 float2 gradientSample = float2(calcGradientAmount(normal), 0.0f);
                 float3 gradient = tex2D(_GradientMap, gradientSample).rgb;
-                float3 roughness = tex2D(_RoughnessMap, st).rgb;
+                float3 roughness = tex2D(_RoughnessMapWet, st * 2.0f).rgb;
+                float3 roughness2 = tex2D(_RoughnessMapDry, st * 2.0f).rgb;
+                
 
-
+                float wet = 1.0f - smoothstep(input.tideHeight.x - 0.03f, input.tideHeight.x, input.worldPos.y);//smoothstep(-0.5f, input.tideHeight.x, input.worldPos.y);
+                
                 float3 cameraDir = normalize(_WorldSpaceCameraPos - input.worldPos.xyz);
 
+                roughness = roughness * wet + roughness2 * (1.0f - wet);
                 float specularStrength = 10.0f * roughness;
-                float3 lightDir = normalize(float3(0.0f, 0.5f, 1.0f));
-                float3 reflectDir = reflect(-lightDir, normal);
+                float3 lightDir = normalize(float3(0.0f, 1.0f, 1.0f));
+                float3 reflectDir = reflect(-lightDir, float3(0.0f, 1.0f, 0.0f));
                 float spec = pow(max(dot(cameraDir, reflectDir), 0.0f), 32);
                 float3 specular = specularStrength * spec * (1.0f).xxx;
 
                 // color = (color + gradient);
-
+                
                 float ambient = 0.6f;
                 float diff = diffuse(normal, _WorldSpaceLightPos0);
                 float3 outColor = color * (ambient + diff + specular);
 
-                float wet = 1.0f - smoothstep(input.tideHeight.x - 0.03f, input.tideHeight.x, input.worldPos.y);//smoothstep(-0.5f, input.tideHeight.x, input.worldPos.y);
                 outColor *= (1.0f - ((1.0f - smoothstep(input.tideHeight.y, input.tideHeight.z, input.worldPos.y)) * 0.4f + 0.1f) * wet);
                 
                 

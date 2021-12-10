@@ -5258,7 +5258,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: d633dc68b431d2841b11504d9bc458bb, type: 2}
+  - {fileID: 2100000, guid: 9d4c3594bb33a8e4986f532f5625aadd, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -7212,13 +7212,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35c68758dd3d29648aef0161962e8160, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  seed: 0
+  seed: 5525
   stepDeltaTime: 0.05
   maxCliffWalkReverts: 100000
-  numAcres: {x: 5, y: 6}
+  numAcres: {x: 10, y: 10}
   acreSize: 16
-  elevationRangeMin: 3
-  elevationRangeMax: 3
+  elevationRangeMin: 5
+  elevationRangeMax: 5
   maxCliffEat: 5
   minCliffEat: 0
   maxBeachCliffEat: 5
@@ -7229,7 +7229,7 @@ MonoBehaviour:
   slopeWidth: 5
   slopeLength: 6
   decorationSpacing: 3
-  treeProbability: 0.824
+  treeProbability: 0.9
   cliffTiles:
   - prefab: {fileID: 8047990961297840060, guid: e39b9f2c4b591554c918b1031a268ebc, type: 3}
     prefabRoof: {fileID: 8071290532819579765, guid: 68c190da55e188b4fa8b629f54fe8fa6, type: 3}
