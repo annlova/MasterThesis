@@ -2,11 +2,20 @@ Shader "Unlit/OceanShader"
 {
     Properties
     {
+        _CalmWaveTex ("Calm wave texture 1", 2D) = "white" {}
+        _CalmWaveTex2 ("Calm Wave texture 2", 2D) = "white" {}
+        _WaveDisplacementTex ("Displacement texture for calm waves", 2D) = "white" {}
+        _WaterTex ("Texture for water (color mainly) 1", 2D) = "white" {}
+        _WaterTex2 ("Texture for water (color mainly) 2", 2D) = "white" {}
+        
         _MainTex ("Texture", 2D) = "white" {}
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+//        Tags { "RenderType"="Opaque" }
+        Tags { "Queue"="Transparent" "RenderType"="Transparent" }
+        Blend SrcAlpha OneMinusSrcAlpha
+
         LOD 100
 
         Pass
@@ -20,6 +29,9 @@ Shader "Unlit/OceanShader"
             #include "UnityShaderVariables.cginc"
             #include "UnityCG.cginc"
 
+            float2 getDisplacementVector(float3 displacement, float displacementFactor);
+            float computeAlpha(float value, float distance, float higherThreshold, float lowerThreshold);
+            
             float nsin(float v);
             float ncos(float v);
             float snoise(float2 v);
@@ -27,26 +39,40 @@ Shader "Unlit/OceanShader"
             
             struct VertexAttributes
             {
-                float4 vertex : POSITION;
+                float4 pos : POSITION;
                 float2 uv : TEXCOORD0;
                 float2 beachHeights : TEXCOORD1;
             };
 
             struct FragmentAttributes
             {
-                float2 uv : TEXCOORD0;
-                float4 vertex : SV_POSITION;
+                float2 st : TEXCOORD0;
+                float4 clipPos : SV_POSITION;
                 float4 worldPos : TEXCOORD1;
                 float heightMap : HEIGHTMAP;
                 float4 tideHeight : TIDE;
+
+                float4 screenPos : TEXCOORD3;
+                float2 dir : TEXCOORD2;
             };
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
+
+            sampler2D _CalmWaveTex;
+            sampler2D _CalmWaveTex2;
+            sampler2D _WaveDisplacementTex;
+            sampler2D _WaterTex;
+            sampler2D _WaterTex2;
+            
+            sampler2D _CameraDepthTexture;
+
+            float4x4 _ProjInverse;
+            float4x4 _ViewInverse;
             
             FragmentAttributes vert (VertexAttributes input)
             {
-                FragmentAttributes o;
+                FragmentAttributes output;
                 float tideChange = 0.15f;
                 float PI = 3.1415927;                             
                 float time = _Time.y * 0.2f;            
@@ -58,21 +84,90 @@ Shader "Unlit/OceanShader"
                 float goingOut = step(animationTimeSkew, frac(time));
                 float tideOffset = (waveIn * (1.0f - goingOut) + waveOut * goingOut) * tideChange;
                 // float tideOffset = cos(waveTime) * tideChange;
-                o.tideHeight = float4(-0.8f + tideOffset, -0.8f - tideChange, -0.8f + tideChange, 0.0f);
+                output.tideHeight = float4(-0.8f + tideOffset, -0.8f - tideChange, -0.8f + tideChange, 0.0f);
                 
-                float4 modelPos = input.vertex + float4(0.0f, tideOffset, 0.0f, 0.0f);
-                o.worldPos = mul(unity_ObjectToWorld, modelPos);
-                o.vertex = UnityObjectToClipPos(modelPos);
+                float4 modelPos = input.pos + float4(0.0f, tideOffset, 0.0f, 0.0f);
+                output.worldPos = mul(unity_ObjectToWorld, modelPos);
+                output.clipPos = UnityObjectToClipPos(modelPos);
                 
-                o.uv = TRANSFORM_TEX(input.uv, _MainTex);
+                output.st = TRANSFORM_TEX(input.uv, _MainTex);
 
                 float beachPosY = -0.3f;
-                o.heightMap = input.beachHeights.x + beachPosY;
-                return o;
+                output.heightMap = input.beachHeights.x + beachPosY;
+                return output;
+            }
+
+            float3 WorldPosFromDepth(float2 uv, float depth) {
+                float z = depth * 2.0 - 1.0;
+
+                float4 clipSpacePosition = float4(uv * 2.0 - 1.0, z, 1.0);
+                float4 viewSpacePosition = mul(_ProjInverse, clipSpacePosition);
+
+                // Perspective division
+                viewSpacePosition /= viewSpacePosition.w;
+
+                float4 worldSpacePosition = mul(_ViewInverse, viewSpacePosition);
+
+                return worldSpacePosition.xyz;
             }
 
             float4 frag (FragmentAttributes input) : SV_Target
             {
+                /// To calculate depth //
+                float2 uv = input.screenPos.xy / input.screenPos.w;
+                float depth = 1.0f - SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, uv);
+                                
+                float3 world = WorldPosFromDepth(uv, depth);
+                float d = distance(input.worldPos, world);
+                d *= 0.1;
+                // d = smoothstep(-5.0f, 0.0f, input.heightMap);
+                ///
+
+                /// Change for more aggressive displacement //
+                float displacementFactor = 0.1f;//0.03f;
+                float displacementFactorWhite = 0.015f;//0.03f;
+                ///
+
+                /// Change for faster scrolling //
+                float timeFactor = _Time.y / 15;
+                ///
+
+                /// Scrolling texture thresholds //
+                float higherThresholdWaves = 0.70f;//1.0f;
+                float lowerThresholdWaves = 0.68f;
+                ///
+
+                /// Calculate displacement with displacement texture //
+                float3 displacement = tex2D(_WaveDisplacementTex, input.st + timeFactor* 0.1);
+                ///
+
+                /// Get scrolled and displaced wave texture coordinates //
+                float2 scrolledStTex1 = fmod(input.worldPos.xz / 1.5f + float2(timeFactor, -timeFactor),
+                    10.0f) / 10.0f + input.dir * float2(-1.0f, -1.0f) * timeFactor * (-0.55);
+                float2 displacedStTex1 =  scrolledStTex1 + getDisplacementVector(displacement, displacementFactorWhite);
+                float2 scrolledStTex2 = fmod(input.worldPos.xz / 1.5f + float2(timeFactor / 3.0f, timeFactor),
+                    10.0f) / 10.0f + input.dir * float2(-1.0f, -1.0f) * timeFactor * (0.9);
+                float2 displacedStTex2 =  scrolledStTex2 + getDisplacementVector(displacement, displacementFactorWhite);
+                ///
+
+                /// Get scrolled and displaced water texture coordinates//
+                //TODO FIX WATER DIRECTION MISSTAKE HERE 
+                float2 displacedStWaterTex1 =  scrolledStTex2 + getDisplacementVector(displacement, displacementFactor);
+                float2 displacedStWaterTex2 =  scrolledStTex1 + getDisplacementVector(displacement, displacementFactor);
+                //
+
+                /// Sample from textures //
+                float3 tex1Color = tex2D(_CalmWaveTex, displacedStTex1 / 2.0f);
+                float3 tex2Color = tex2D(_CalmWaveTex2, displacedStTex2 / 2.0f);
+                
+                float3 waterColor2 = tex2D(_WaterTex2, displacedStWaterTex2) * clamp(d, 0.5f, 1.0f);
+
+                float3 outColor = tex1Color + tex2Color; // Add together wave textures
+
+                float alphaCalmWater = computeAlpha(outColor.r, clamp(d, 0.0f, 1.0f), higherThresholdWaves, lowerThresholdWaves); // Compute alpha for waves
+
+                float3 calmWaterColor = lerp(waterColor2, waterColor2 * 1.5f, alphaCalmWater) * float3(0.3f, 0.99f, 1.2f);
+                
                 float tideChange = 0.15f;
                 float PI = 3.1415927;                             
                 float time = _Time.y * 0.2f;            
@@ -95,10 +190,35 @@ Shader "Unlit/OceanShader"
                 float foam = nsnoise(input.worldPos.xz) * foamEdgeThicknessMax + foamEdgeThicknessMin;
                 float waveFactor = step(input.worldPos.y - foam, h);
                 float a = lerp(0.0f, PI * 1.7f, frac(_Time.y * 0.2f));
-                waveFactor = max(step(0.995f, ncos(h - a)), waveFactor);
-                float3 waveCol = lerp(skyColor, white, waveFactor);
-                return float4(waveCol, 1.0f);
+                // waveFactor = max(step(0.995f, ncos(h - a)), waveFactor);
+                float3 waveCol = lerp(calmWaterColor, white, waveFactor);
+                // return float4(waveCol, 1.0f);
+                return float4(d, d, d, 1);
             }
+
+             /**
+             * Returns displacement direction
+             */
+            float2 getDisplacementVector(float3 displacement, float displacementFactor)
+            {
+                float2 displacementVector = float2(displacement.r, displacementFactor) * displacementFactor * 2 - 1;
+
+                return displacementVector;
+            }
+
+            float computeAlpha(float value, float distance, float higherThreshold, float lowerThreshold)
+            {
+                // Makes values <= higherThreshold visible
+                //int isOpaque1 = step(value, higherThreshold - distance * 0.25);
+                int isOpaque1 = step(value, higherThreshold);
+
+                // Makes values >= lowerThreshold visible
+                int isOpaque2 = step(lowerThreshold, value);
+                
+                return value * isOpaque1 * isOpaque2;
+            }
+
+            //////////////////
 
             float nsin(float v)
             {

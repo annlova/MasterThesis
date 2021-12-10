@@ -102,6 +102,7 @@ public class FreeFlyCamera : MonoBehaviour
     {
         camera = GetComponentInParent<UnityEngine.Camera>();
         riverRenderer = GameObject.Find("TerrainGenerator").transform.Find("RiversRender").GetComponent<Renderer>();
+        oceanRenderer = GameObject.Find("TerrainGenerator").transform.Find("OceanRender").GetComponent<Renderer>();
         _initPosition = transform.position;
         _initRotation = transform.eulerAngles;
     }
@@ -114,12 +115,15 @@ public class FreeFlyCamera : MonoBehaviour
 
     private UnityEngine.Camera camera;
     private Renderer riverRenderer;
+    private Renderer oceanRenderer;
     private void OnPreRender()
     {
         var projInv = (camera.projectionMatrix).inverse;
         var viewInv = (camera.worldToCameraMatrix).inverse;
         riverRenderer.sharedMaterial.SetMatrix("_ProjInverse", projInv);
         riverRenderer.sharedMaterial.SetMatrix("_ViewInverse", viewInv);
+        oceanRenderer.sharedMaterial.SetMatrix("_ProjInverse", projInv);
+        oceanRenderer.sharedMaterial.SetMatrix("_ViewInverse", viewInv);
     }
 
     // Apply requested cursor state

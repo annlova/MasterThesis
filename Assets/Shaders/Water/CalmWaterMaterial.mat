@@ -28,7 +28,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _CalmWaveTex2:
-        m_Texture: {fileID: 2800000, guid: 9af5920944aa1b74391ab1b4f1405bf4, type: 3}
+        m_Texture: {fileID: 2800000, guid: 26cee031bf87ce648ae5e2630ef38ca1, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DetailAlbedoMap:
