@@ -23,8 +23,6 @@ Shader "Unlit/OceanShader"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            // make fog work
-            #pragma multi_compile_fog
 
             #include "UnityShaderVariables.cginc"
             #include "UnityCG.cginc"
@@ -36,6 +34,9 @@ Shader "Unlit/OceanShader"
             float ncos(float v);
             float snoise(float2 v);
             float nsnoise(float2 v);
+
+            float4x4 _ProjInverse;
+            float4x4 _ViewInverse;
             
             struct VertexAttributes
             {
@@ -66,9 +67,6 @@ Shader "Unlit/OceanShader"
             sampler2D _WaterTex2;
             
             sampler2D _CameraDepthTexture;
-
-            float4x4 _ProjInverse;
-            float4x4 _ViewInverse;
             
             FragmentAttributes vert (VertexAttributes input)
             {
@@ -87,11 +85,13 @@ Shader "Unlit/OceanShader"
                 output.tideHeight = float4(-0.8f + tideOffset, -0.8f - tideChange, -0.8f + tideChange, 0.0f);
                 
                 float4 modelPos = input.pos + float4(0.0f, tideOffset, 0.0f, 0.0f);
-                output.worldPos = mul(unity_ObjectToWorld, modelPos);
+                output.worldPos = mul( modelPos, unity_ObjectToWorld);
                 output.clipPos = UnityObjectToClipPos(modelPos);
                 
-                output.st = TRANSFORM_TEX(input.uv, _MainTex);
-
+                output.st = input.uv;
+                output.dir = float2(0.0f, 1.0f);
+                output.screenPos = ComputeScreenPos(output.clipPos);
+                
                 float beachPosY = -0.3f;
                 output.heightMap = input.beachHeights.x + beachPosY;
                 return output;
@@ -119,8 +119,9 @@ Shader "Unlit/OceanShader"
                                 
                 float3 world = WorldPosFromDepth(uv, depth);
                 float d = distance(input.worldPos, world);
-                d *= 0.1;
-                // d = smoothstep(-5.0f, 0.0f, input.heightMap);
+                // d *= 0.1;
+                // d = depth;
+                d = smoothstep(-2.5f, 0.0f, input.heightMap);
                 ///
 
                 /// Change for more aggressive displacement //
@@ -160,7 +161,7 @@ Shader "Unlit/OceanShader"
                 float3 tex1Color = tex2D(_CalmWaveTex, displacedStTex1 / 2.0f);
                 float3 tex2Color = tex2D(_CalmWaveTex2, displacedStTex2 / 2.0f);
                 
-                float3 waterColor2 = tex2D(_WaterTex2, displacedStWaterTex2) * clamp(d, 0.5f, 1.0f);
+                float3 waterColor2 = tex2D(_WaterTex2, displacedStWaterTex2) * lerp(0.5f, 1.0f, d);
 
                 float3 outColor = tex1Color + tex2Color; // Add together wave textures
 
@@ -192,8 +193,7 @@ Shader "Unlit/OceanShader"
                 float a = lerp(0.0f, PI * 1.7f, frac(_Time.y * 0.2f));
                 // waveFactor = max(step(0.995f, ncos(h - a)), waveFactor);
                 float3 waveCol = lerp(calmWaterColor, white, waveFactor);
-                // return float4(waveCol, 1.0f);
-                return float4(d, d, d, 1);
+                return float4(waveCol, 1.0f);
             }
 
              /**

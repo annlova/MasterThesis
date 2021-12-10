@@ -12,7 +12,7 @@ Shader "Unlit/CalmWaterShader"
     }
     SubShader
     {
-        Tags { "Queue"="Transparent" "RenderType"="Transparent" }
+        Tags { "Queue"="Geometry" "RenderType"="Opaque" }
         Blend SrcAlpha OneMinusSrcAlpha
 
         Pass
@@ -168,7 +168,7 @@ Shader "Unlit/CalmWaterShader"
                 // specular = clamp(0.0f, 1.0f, specular);
 
                 // return float4(d,d,d, 1);
-                return float4(waterColor2, 1.0f);
+                // return float4(waterColor2, 1.0f);
                 return float4(lerp(waterColor2, waterColor2 * 1.5f, alpha) * float3(0.3f, 0.99f, 1.2f), 1.0f);
                 return float4(outColor * min((1 - isWater), 1)
                     + waterColor * min(isWater, 1)

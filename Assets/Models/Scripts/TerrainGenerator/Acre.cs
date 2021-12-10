@@ -27,7 +27,7 @@ namespace TerrainGenerator
     public bool riverEastFlowsEast;
     public bool hasRiverSouth;
 
-    public List<Tile> waterfallTiles;
+    public List<Tile>[] waterfallTiles;
     public float waterfallTransPosFirst;
     public float waterfallTransPosLast;
     public Vector2Int waterfallDir;
@@ -47,7 +47,11 @@ namespace TerrainGenerator
 
       cliffWalked = false;
 
-      waterfallTiles = new List<Tile>();
+      waterfallTiles = new List<Tile>[elevation + 1];
+      for (int i = 0; i < waterfallTiles.Length; i++)
+      {
+        waterfallTiles[i] = new List<Tile>();
+      }
     }
   }
 }

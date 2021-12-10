@@ -13,6 +13,9 @@ namespace TerrainGenerator
 {
     public class TerrainGenerator : MonoBehaviour
     {
+        [SerializeField] 
+        private int seed;
+        
         [SerializeField]
         private float stepDeltaTime;
         
@@ -186,6 +189,11 @@ namespace TerrainGenerator
         // Start is called before the first frame update
         void Start()
         {
+            if (seed != 0)
+            {
+                Random.InitState(seed);
+            }
+
             Init();
             while (currentWalkAgent == null || !currentWalkAgent.IsDone() || currentIsland < numIslands)
             {
@@ -668,12 +676,13 @@ namespace TerrainGenerator
             {
                 for (int x = 0; x < numAcres.x; x++)
                 {
+                    var riverOutlet = acres[x, y].hasRiverSouth && y == numAcres.y - 1;
                     var p = new Vector3(0.0f, elevation, 0.0f);
                     if (x == 0 && y < numAcres.y - 1 && (acres[x, y].elevation == 0 || acres[x, y + 1].elevation == 0))
                     {
                         p.z = height - size - y * size;
-                        CreateBeach(p);
-                        var beachHeightMap = CreateBeach(p + Vector3.left * size);
+                        CreateBeach(p, riverOutlet);
+                        var beachHeightMap = CreateBeach(p + Vector3.left * size, false);
                         CreateOcean(p + Vector3.left * size, oceanOffset, beachHeightMap);
                     }
                     else if (y == numAcres.y - 1 && acres[x, y].elevation == 0)
@@ -681,32 +690,36 @@ namespace TerrainGenerator
                         p.x = x * size;
                         p.z = 0.0f;
                         
-                        CreateBeach(p);
-                        var beachHeightMap = CreateBeach(p + Vector3.back * size);
-                        CreateOcean(p + Vector3.back * size, oceanOffset, beachHeightMap);
+                        var beachHeightmap = CreateBeach(p, riverOutlet);
+                        if (riverOutlet)
+                        {
+                            CreateOcean(p, oceanOffset, beachHeightmap);
+                        }
+                        beachHeightmap = CreateBeach(p + Vector3.back * size, riverOutlet);
+                        CreateOcean(p + Vector3.back * size, oceanOffset, beachHeightmap);
                     }
                     else if (x == numAcres.x - 1 && y < numAcres.y - 1 && (acres[x, y].elevation == 0 || acres[x, y + 1].elevation == 0))
                     {
                         p.x = width - size;
                         p.z = height - size - y * size;
                         
-                        CreateBeach(p);
-                        var beachHeightMap = CreateBeach(p + Vector3.right * size);
+                        CreateBeach(p, riverOutlet);
+                        var beachHeightMap = CreateBeach(p + Vector3.right * size, false);
                         CreateOcean(p + Vector3.right * size, oceanOffset, beachHeightMap);
                     }
                 }
             }
             
-            var bh = CreateBeach(new Vector3(-size, elevation, -size));
+            var bh = CreateBeach(new Vector3(-size, elevation, -size), false);
             CreateOcean(new Vector3(-size, elevation, -size), oceanOffset, bh);
             
-            bh = CreateBeach(new Vector3(-size, elevation, 0));
+            bh = CreateBeach(new Vector3(-size, elevation, 0), false);
             CreateOcean(new Vector3(-size, elevation, 0), oceanOffset, bh);
             
-            bh = CreateBeach(new Vector3(numAcres.x * size, elevation, -size));
+            bh = CreateBeach(new Vector3(numAcres.x * size, elevation, -size), false);
             CreateOcean(new Vector3(numAcres.x * size, elevation, -size), oceanOffset, bh);
             
-            bh = CreateBeach(new Vector3(numAcres.x * size, elevation, 0));
+            bh = CreateBeach(new Vector3(numAcres.x * size, elevation, 0), false);
             CreateOcean(new Vector3(numAcres.x * size, elevation, 0), oceanOffset, bh);
         }
 
@@ -725,7 +738,7 @@ namespace TerrainGenerator
             mesh.uv2 = uv2;
         }
         
-        private float[] CreateBeach(Vector3 pos)
+        private float[] CreateBeach(Vector3 pos, bool riverOutlet)
         {
             var size = acreSize + 1;
             var beach = Instantiate(beachGridPrefab, pos, beachGridPrefab.transform.rotation, transform);
@@ -742,6 +755,17 @@ namespace TerrainGenerator
                 // Calculate vertex position
                 var worldPos = vertices[i] + pos;
                 var offset = ComputeBeachVertexOffset(worldPos);
+                var outletHalfWidth = riverWidth / 1.5f;
+                if (worldPos.z < 0.0f)
+                {
+                    outletHalfWidth += Math.Max((size / 6.0f) - vertices[i].z / 6.0f, 0.0f);
+                }
+                if (vertices[i].x >= size / 2.0f - outletHalfWidth &&
+                    vertices[i].x <= size / 2.0f + outletHalfWidth &&
+                    riverOutlet)
+                {
+                    offset += 0.5f * (outletHalfWidth - (float) Math.Abs(vertices[i].x - size / 2.0f));
+                }
                 vertices[i] = vertices[i] + Vector3.down * offset;
 
                 var index = (int) (vertices[i].x + 0.3f) + (int) (vertices[i].z + 0.3f) * size;
@@ -797,6 +821,19 @@ namespace TerrainGenerator
             {
                 waveTerm += ((float) Math.Sin(p.x * 0.5f) + (float) Math.Sin(p.x * 0.2f) + 2.0f) * waveFactor;
                 //  + (float) Math.Sin(p.x * 24.0f) + 2.0f
+            }
+            else
+            {
+                var px = (int) p.x;
+                var pz = (int) p.z;
+                if (px >= acreSize / 2 - (int) Math.Ceiling((riverWidth - 2) / 2.0f) &&
+                    px <= width - acreSize / 2 + (int) Math.Ceiling((riverWidth - 2) / 2.0f) &&
+                    pz >= acreSize / 2 - (int) Math.Ceiling((riverWidth - 2) / 2.0f) &&
+                    !tiles[px, height - 1 - pz].isBeach &&
+                    !tiles[px, height - 1 - pz].isCliff)
+                {
+                    return 1.0f;
+                }
             }
             return falloffTerm * 5.0f + waveTerm;
         }
@@ -2218,136 +2255,157 @@ namespace TerrainGenerator
         {
             foreach (var acre in acres)
             {
-                // No river, no waterfall
-                if (acre.waterfallTiles.Count == 0)
+                for (int elevation = acre.elevation; elevation >= 0; elevation--)
                 {
-                    continue;
-                }
-
-                var tiles = acre.waterfallTiles;
-
-                var first = tiles[0];
-                var last = tiles[tiles.Count - 1];
-                var firstLastDiff = last.pos - first.pos;
-
-                var transPosFirst = Vector3.zero;
-                var transPosLast = Vector3.zero;
-                var posFirstTop = Vector2Int.zero;
-                var posLastTop = Vector2Int.zero;
-                var posFirstBot = Vector2Int.zero;
-                var posLastBot = Vector2Int.zero;
-                if (acre.waterfallDir.x > 0)
-                {
-                    // EAST
-                    if (first.pos.x < last.pos.x)
+                    // No river, no waterfall
+                    if (acre.waterfallTiles[elevation].Count == 0)
                     {
-                        posFirstTop = new Vector2Int(first.pos.x - 1, first.pos.y + 1);
-                        posLastTop = new Vector2Int(first.pos.x - 1, last.pos.y);
-                        posFirstBot = new Vector2Int(last.pos.x + 1, first.pos.y + 1);
-                        posLastBot = new Vector2Int(last.pos.x + 1, last.pos.y);
+                        continue;
+                    }
+                    
+                    var tiles = acre.waterfallTiles[elevation];
+
+                    var first = tiles[0];
+                    var last = tiles[tiles.Count - 1];
+                    var firstLastDiff = last.pos - first.pos;
+
+                    var transPosFirst = Vector3.zero;
+                    var transPosLast = Vector3.zero;
+                    var posFirstTop = Vector2Int.zero;
+                    var posLastTop = Vector2Int.zero;
+                    var posFirstBot = Vector2Int.zero;
+                    var posLastBot = Vector2Int.zero;
+                    if (acre.waterfallDir.x > 0)
+                    {
+                        // EAST
+                        if (first.pos.x < last.pos.x)
+                        {
+                            posFirstTop = new Vector2Int(first.pos.x - 1, first.pos.y + 1);
+                            posLastTop = new Vector2Int(first.pos.x - 1, last.pos.y);
+                            posFirstBot = new Vector2Int(last.pos.x + 1, first.pos.y + 1);
+                            posLastBot = new Vector2Int(last.pos.x + 1, last.pos.y);
+                        }
+                        else
+                        {
+                            posFirstTop = new Vector2Int(last.pos.x - 1, first.pos.y + 1);
+                            posLastTop = new Vector2Int(last.pos.x - 1, last.pos.y);
+                            posFirstBot = new Vector2Int(first.pos.x + 1, first.pos.y + 1);
+                            posLastBot = new Vector2Int(first.pos.x + 1, last.pos.y);
+                        }
+                    }
+                    else if (acre.waterfallDir.x < 0)
+                    {
+                        // WEST
+                        if (first.pos.x > last.pos.x)
+                        {
+                            posFirstTop = new Vector2Int(first.pos.x + 2, first.pos.y);
+                            posLastTop = new Vector2Int(first.pos.x + 2, last.pos.y + 1);
+                            posFirstBot = new Vector2Int(last.pos.x, first.pos.y);
+                            posLastBot = new Vector2Int(last.pos.x, last.pos.y + 1);
+                        }
+                        else
+                        {
+                            posFirstTop = new Vector2Int(last.pos.x + 1, first.pos.y);
+                            posLastTop = new Vector2Int(last.pos.x + 1, last.pos.y + 1);
+                            posFirstBot = new Vector2Int(first.pos.x, first.pos.y);
+                            posLastBot = new Vector2Int(first.pos.x, last.pos.y + 1);
+                        }
                     }
                     else
                     {
-                        posFirstTop = new Vector2Int(last.pos.x - 1, first.pos.y + 1);
-                        posLastTop = new Vector2Int(last.pos.x - 1, last.pos.y);  
-                        posFirstBot = new Vector2Int(first.pos.x + 1, first.pos.y + 1);
-                        posLastBot = new Vector2Int(first.pos.x + 1, last.pos.y);                   
+                        // SOUTH
+                        if (first.pos.y < last.pos.y)
+                        {
+                            posFirstTop = new Vector2Int(first.pos.x, first.pos.y - 1);
+                            posLastTop = new Vector2Int(last.pos.x + 1, first.pos.y - 1);
+                            posFirstBot = new Vector2Int(first.pos.x, last.pos.y + 1);
+                            posLastBot = new Vector2Int(last.pos.x + 1, last.pos.y + 1);
+                        }
+                        else
+                        {
+                            posFirstTop = new Vector2Int(first.pos.x, last.pos.y - 1);
+                            posLastTop = new Vector2Int(last.pos.x + 1, last.pos.y - 1);
+                            posFirstBot = new Vector2Int(first.pos.x, first.pos.y + 1);
+                            posLastBot = new Vector2Int(last.pos.x + 1, first.pos.y + 1);
+                        }
                     }
+
+                    // Find vertices a, b, c, d of waterfall mesh
+                    var a = Vector3.zero;
+                    var b = Vector3.zero;
+                    var c = Vector3.zero;
+                    var d = Vector3.zero;
+                    var e = Vector3.zero;
+                    var f = Vector3.zero;
+                    var g = Vector3.zero;
+                    var h = Vector3.zero;
+                    var p = new Vector3(first.pos.x + 0.5f, (elevation - 1) * elevationHeight - riverSurfaceOffset,
+                        height - 1 - first.pos.y + 0.5f);
+
+                    var firstMesh = first.cliffTile.prefab.GetComponent<MeshFilter>().sharedMesh;
+                    var firstVerts = firstMesh.vertices;
+                    var firstUvs = firstMesh.uv;
+                    for (int i = 0; i < firstMesh.vertexCount; i++)
+                    {
+                        var uv = firstUvs[i];
+                        var offsetVector = new Vector3(acre.waterfallDir.x, 0.0f, -acre.waterfallDir.y);
+                        var abc = -acre.waterfallDir * firstLastDiff +
+                                  acre.waterfallDir * new Vector2((float) Math.Ceiling(a.x) - a.x,
+                                      (float) Math.Ceiling(a.y) - a.y) +
+                                  acre.waterfallDir;
+                        if (uv.x < 0.5f && uv.y > 0.5f)
+                        {
+                            a = first.cliffTile.prefab.transform.rotation * firstVerts[i];
+                            e = new Vector3(posFirstTop.x, p.y + a.y, height - posFirstTop.y) - p;
+                        }
+                        else if (uv.x < 0.5f && uv.y < 0.5f)
+                        {
+                            float downOffset = first.elevation - first.floor - 1;
+                            if (first.elevation == 0)
+                            {
+                                downOffset = 1.0f;
+                            }
+
+                            c = first.cliffTile.prefab.transform.rotation * firstVerts[i] +
+                                Vector3.down * downOffset * elevationHeight;
+                            g = new Vector3(posFirstBot.x, p.y + c.y, height - posFirstBot.y) - p;
+                        }
+                    }
+
+                    var lastMesh = last.cliffTile.prefab.GetComponent<MeshFilter>().sharedMesh;
+                    var lastVerts = lastMesh.vertices;
+                    var lastUvs = lastMesh.uv;
+                    for (int i = 0; i < lastMesh.vertexCount; i++)
+                    {
+                        var uv = lastUvs[i];
+                        var abc = -acre.waterfallDir * firstLastDiff +
+                                  acre.waterfallDir * new Vector2((float) Math.Ceiling(a.x) - a.x,
+                                      (float) Math.Ceiling(a.y) - a.y) +
+                                  acre.waterfallDir;
+                        if (uv.x > 0.5f && uv.y > 0.5f)
+                        {
+                            b = last.cliffTile.prefab.transform.rotation * lastVerts[i];
+                            b += new Vector3(firstLastDiff.x, 0.0f, -firstLastDiff.y);
+                            f = new Vector3(posLastTop.x, p.y + b.y, height - posLastTop.y) - p;
+                        }
+                        else if (uv.x > 0.5f && uv.y < 0.5f)
+                        {
+                            float downOffset = first.elevation - first.floor - 1;
+                            if (first.elevation == 0)
+                            {
+                                downOffset = 1.0f;
+                            }
+
+                            d = last.cliffTile.prefab.transform.rotation * lastVerts[i] +
+                                Vector3.down * downOffset * elevationHeight;
+                            d += new Vector3(firstLastDiff.x, 0.0f, -firstLastDiff.y);
+                            h = new Vector3(posLastBot.x, p.y + d.y, height - posLastBot.y) - p;
+                        }
+                    }
+
+                    CreateWaterfall(a, b, c, d, e, f, g, h, p);
+                    // Debug.Log("Waterfall! Width = " + waterfallWidth + ". start = " + start + ". end = " + end);
                 }
-                else if (acre.waterfallDir.x < 0)
-                {
-                    // WEST
-                    if (first.pos.x > last.pos.x)
-                    {
-                        posFirstTop = new Vector2Int(first.pos.x + 1, first.pos.y);
-                        posLastTop = new Vector2Int(first.pos.x + 1, last.pos.y + 1);
-                        posFirstBot = new Vector2Int(last.pos.x, first.pos.y);
-                        posLastBot = new Vector2Int(last.pos.x, last.pos.y + 1);
-                    }
-                    else
-                    {
-                        posFirstTop = new Vector2Int(last.pos.x + 1, first.pos.y);
-                        posLastTop = new Vector2Int(last.pos.x + 1, last.pos.y + 1);       
-                        posFirstBot = new Vector2Int(first.pos.x, first.pos.y);
-                        posLastBot = new Vector2Int(first.pos.x, last.pos.y + 1);           
-                    }
-                }
-                else
-                {
-                    // SOUTH
-                    if (first.pos.y < last.pos.y)
-                    {
-                        posFirstTop = new Vector2Int(first.pos.x, first.pos.y - 1);
-                        posLastTop = new Vector2Int(last.pos.x + 1, first.pos.y - 1);
-                        posFirstBot = new Vector2Int(first.pos.x, last.pos.y + 1);
-                        posLastBot = new Vector2Int(last.pos.x + 1, last.pos.y + 1);
-                    }
-                    else
-                    {
-                        posFirstTop = new Vector2Int(first.pos.x, last.pos.y - 1);
-                        posLastTop = new Vector2Int(last.pos.x + 1, last.pos.y - 1);         
-                        posFirstBot = new Vector2Int(first.pos.x, first.pos.y + 1);
-                        posLastBot = new Vector2Int(last.pos.x + 1, first.pos.y + 1);         
-                    }
-                }
-                // Find vertices a, b, c, d of waterfall mesh
-                var a = Vector3.zero;
-                var b = Vector3.zero;
-                var c = Vector3.zero;
-                var d = Vector3.zero;
-                var e = Vector3.zero;
-                var f = Vector3.zero;
-                var g = Vector3.zero;
-                var h = Vector3.zero;
-                var p = new Vector3(first.pos.x + 0.5f, (acre.elevation - 1) * elevationHeight - riverSurfaceOffset, height - 1 - first.pos.y + 0.5f);
-                
-                var firstMesh = first.cliffTile.prefab.GetComponent<MeshFilter>().sharedMesh;
-                var firstVerts = firstMesh.vertices;
-                var firstUvs = firstMesh.uv;
-                for (int i = 0; i < firstMesh.vertexCount; i++)
-                {
-                    var uv = firstUvs[i];
-                    var offsetVector = new Vector3(acre.waterfallDir.x, 0.0f, -acre.waterfallDir.y);
-                    var abc = -acre.waterfallDir * firstLastDiff +
-                              acre.waterfallDir * new Vector2((float) Math.Ceiling(a.x) - a.x, (float) Math.Ceiling(a.y) - a.y) +
-                              acre.waterfallDir;
-                    if (uv.x < 0.5f && uv.y > 0.5f)
-                    {
-                        a = first.cliffTile.prefab.transform.rotation * firstVerts[i];
-                        e = new Vector3(posFirstTop.x, p.y + a.y, height - posFirstTop.y) - p;
-                    }
-                    else if (uv.x < 0.5f && uv.y < 0.5f)
-                    {
-                        c = first.cliffTile.prefab.transform.rotation * firstVerts[i] + Vector3.down * (first.elevation - first.floor - 1) * elevationHeight;
-                        g = new Vector3(posFirstBot.x, p.y + c.y, height - posFirstBot.y) - p;
-                    }
-                }      
-                
-                var lastMesh = last.cliffTile.prefab.GetComponent<MeshFilter>().sharedMesh;
-                var lastVerts = lastMesh.vertices;
-                var lastUvs = lastMesh.uv;
-                for (int i = 0; i < lastMesh.vertexCount; i++)
-                {
-                    var uv = lastUvs[i];
-                    var abc = -acre.waterfallDir * firstLastDiff +
-                              acre.waterfallDir * new Vector2((float) Math.Ceiling(a.x) - a.x, (float) Math.Ceiling(a.y) - a.y) +
-                              acre.waterfallDir;
-                    if (uv.x > 0.5f && uv.y > 0.5f)
-                    {
-                        b = last.cliffTile.prefab.transform.rotation * lastVerts[i];
-                        b += new Vector3(firstLastDiff.x, 0.0f, -firstLastDiff.y);
-                        f = new Vector3(posLastTop.x, p.y + b.y, height - posLastTop.y) - p;
-                    }
-                    else if (uv.x > 0.5f && uv.y < 0.5f)
-                    {
-                        d = last.cliffTile.prefab.transform.rotation * lastVerts[i] + Vector3.down * (last.elevation - last.floor - 1) * elevationHeight;
-                        d += new Vector3(firstLastDiff.x, 0.0f, -firstLastDiff.y);
-                        h = new Vector3(posLastBot.x, p.y + d.y, height - posLastBot.y) - p;
-                    }
-                }
-                
-                CreateWaterfall(a, b, c, d, e, f, g, h, p);
-                // Debug.Log("Waterfall! Width = " + waterfallWidth + ". start = " + start + ". end = " + end);
             }
         }
 
@@ -2365,7 +2423,7 @@ namespace TerrainGenerator
             var rotation = Quaternion.AngleAxis(angle, Vector3.up);
             
             var waterfall = Instantiate(waterfallPrefab, p, Quaternion.identity, transform);
-            var waterfallBottom = Instantiate(waterfallPrefab, p - new Vector3(0.0f, bottomRiverOffset, 0.0f), Quaternion.identity, transform);
+            var waterfallBottom = Instantiate(waterfallPrefab, p - new Vector3(0.0f, bottomRiverOffset - riverSurfaceOffset, 0.0f), Quaternion.identity, transform);
             waterfallBottom.tag = "RiverBottom";
             var mesh = waterfall.GetComponent<MeshFilter>().mesh;
             var vertices = mesh.vertices;
@@ -2392,7 +2450,7 @@ namespace TerrainGenerator
                         {
                             vertices[i] = c + new Vector3(0.0f, 0.5f + v.y, 0.0f) + rotation * new Vector3(0.0f, 0.0f, v.z);;
                             normals[i] = rotation * normals[i];
-                            verticesBottom[i] = vertices[i];
+                            verticesBottom[i] = vertices[i] + rotation * new Vector3(0.0f, 0.0f, bottomRiverOffset);
                             normalsBottom[i] = normals[i];
                         }
                     }
@@ -2402,14 +2460,14 @@ namespace TerrainGenerator
                         {
                             vertices[i] = b - new Vector3(0.0f, 0.5f - v.y, 0.0f) + rotation * new Vector3(0.0f, 0.0f, v.z);;
                             normals[i] = rotation * normals[i];
-                            verticesBottom[i] = vertices[i];
+                            verticesBottom[i] = vertices[i] + rotation * new Vector3(0.0f, 0.0f, bottomRiverOffset);
                             normalsBottom[i] = normals[i];
                         }
                         else
                         {
                             vertices[i] = d + new Vector3(0.0f, 0.5f + v.y, 0.0f) + rotation * new Vector3(0.0f, 0.0f, v.z);;
                             normals[i] = rotation * normals[i];
-                            verticesBottom[i] = vertices[i];
+                            verticesBottom[i] = vertices[i] + rotation * new Vector3(0.0f, 0.0f, bottomRiverOffset);
                             normalsBottom[i] = normals[i];
                         }
                     }
@@ -2459,6 +2517,10 @@ namespace TerrainGenerator
             bottomMesh.normals = normalsBottom;
 
             var mistPos = Vector3.Lerp(c, d, 0.5f) + p;
+            if (mistPos.y < -0.3f)
+            {
+                mistPos.y = -1.5f;
+            }
             Instantiate(waterFallMistEmitter, mistPos, waterFallMistEmitter.transform.rotation, transform);
         }
 
@@ -2774,9 +2836,9 @@ namespace TerrainGenerator
 
                     centerRiverDir = centerRiverDir.normalized;
                     // Fix middle tiles
-                    for (int y = 0; y < riverWidth / 2; y++)
+                    for (int y = 0; y < riverWidth - 2; y++)
                     {
-                        for (int x = 0; x < riverWidth / 2; x++)
+                        for (int x = 0; x < riverWidth - 2; x++)
                         {
                             var p = new Vector2Int(pos.x + acreSize / 2 - riverWidth / 2 + 1 + x, pos.y + acreSize / 2 + 1 - riverWidth / 2 + y);
                             var t = tiles[p.x, p.y];
@@ -3123,9 +3185,10 @@ namespace TerrainGenerator
                     var canopyMesh = canopy.GetComponent<MeshFilter>().mesh;
                     var canopyUv2 = new Vector2[canopyMesh.uv.Length];
                     var canopyRng = Random.Range(0.0f, 1.0f);
+                    var canopyRng2 = Random.Range(0.0f, 1.0f);
                     for (var k = 0; k < canopyUv2.Length; k++)
                     {
-                        canopyUv2[k] = new Vector2(canopyRng, 0.0f);
+                        canopyUv2[k] = new Vector2(canopyRng, canopyRng2);
                     }
 
                     canopyMesh.uv2 = canopyUv2;

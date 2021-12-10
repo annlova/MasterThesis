@@ -16,7 +16,7 @@ Shader "Unlit/WaterFallShader"
     }
     SubShader
     {
-        Tags { "Queue"="Transparent" "RenderType"="Transparent" }
+        Tags { "Queue"="Geometry" "RenderType"="Opaque" }
         Blend SrcAlpha OneMinusSrcAlpha
 
         Pass
@@ -123,9 +123,8 @@ Shader "Unlit/WaterFallShader"
             float4 calmFragShader(FragmentAttributes input)
             {
                 float2 st = frac(float2(input.worldPos.x, input.worldPos.z));
-                // st.x *= 3;
-                // st.y = smoothstep(1.0f, 0.9f, st.y) * 1.6f;
-                                /// To calculate depth //
+                input.dir = -input.dir;
+                /// To calculate depth //
                 float2 uv = input.screenPos.xy / input.screenPos.w;
                 float depth = 1.0f - SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, uv);
                                 
@@ -143,7 +142,7 @@ Shader "Unlit/WaterFallShader"
                 ///
 
                 /// Scrolling texture thresholds //
-                float higherThresholdWaves = 0.75f;//1.0f;
+                float higherThresholdWaves = 0.70f;//1.0f;
                 float lowerThresholdWaves = 0.68f;
                 ///
 
@@ -154,16 +153,16 @@ Shader "Unlit/WaterFallShader"
                 /// Get scrolled and displaced wave texture coordinates //
                 float2 scrolledStTex1 = fmod(input.worldPos.xz / 1.5f + float2(timeFactor, -timeFactor),
                     10.0f) / 10.0f + input.dir * float2(-1.0f, -1.0f) * timeFactor * (-0.55);
-                float2 displacedStTex1 =  scrolledStTex1 + calmGetDisplacementVector(displacement, displacementFactorWhite);
+                float2 displacedStTex1 =  scrolledStTex1 + getDisplacementVector(displacement, displacementFactorWhite);
                 float2 scrolledStTex2 = fmod(input.worldPos.xz / 1.5f + float2(timeFactor / 3.0f, timeFactor),
                     10.0f) / 10.0f + input.dir * float2(-1.0f, -1.0f) * timeFactor * (0.9);
-                float2 displacedStTex2 =  scrolledStTex2 + calmGetDisplacementVector(displacement, displacementFactorWhite);
+                float2 displacedStTex2 =  scrolledStTex2 + getDisplacementVector(displacement, displacementFactorWhite);
                 ///
 
                 /// Get scrolled and displaced water texture coordinates//
                 //TODO FIX WATER DIRECTION MISSTAKE HERE 
-                float2 displacedStWaterTex1 =  scrolledStTex2 + calmGetDisplacementVector(displacement, displacementFactor);
-                float2 displacedStWaterTex2 =  scrolledStTex1 + calmGetDisplacementVector(displacement, displacementFactor);
+                float2 displacedStWaterTex1 =  scrolledStTex2 + getDisplacementVector(displacement, displacementFactor);
+                float2 displacedStWaterTex2 =  scrolledStTex1 + getDisplacementVector(displacement, displacementFactor);
                 //
 
                 /// Sample from textures //
@@ -195,8 +194,8 @@ Shader "Unlit/WaterFallShader"
                 // float3 specular = specularStrength * spec * (1.0f).xxx;
                 // specular = clamp(0.0f, 1.0f, specular);
 
+                // return float4(waterColor2, 1.0f);
                 return float4(lerp(waterColor2, waterColor2 * 1.5f, alpha) * float3(0.3f, 0.99f, 1.2f), 1.0f);
-                return float4(waterColor2 * 0.8f, 1.0f);
                 return float4(outColor * min((1 - isWater), 1)
                     + waterColor * min(isWater, 1)
                     , 1);

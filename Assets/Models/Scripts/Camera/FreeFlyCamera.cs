@@ -6,6 +6,8 @@
 using System;
 using Camera;
 using UnityEngine;
+using UnityEngine.UIElements;
+using Cursor = UnityEngine.Cursor;
 
 [RequireComponent(typeof(UnityEngine.Camera))]
 public class FreeFlyCamera : MonoBehaviour
@@ -103,6 +105,7 @@ public class FreeFlyCamera : MonoBehaviour
         camera = GetComponentInParent<UnityEngine.Camera>();
         riverRenderer = GameObject.Find("TerrainGenerator").transform.Find("RiversRender").GetComponent<Renderer>();
         oceanRenderer = GameObject.Find("TerrainGenerator").transform.Find("OceanRender").GetComponent<Renderer>();
+        waterfallRenderer = GameObject.Find("TerrainGenerator").transform.Find("WaterfallRender").GetComponent<Renderer>();
         _initPosition = transform.position;
         _initRotation = transform.eulerAngles;
     }
@@ -116,14 +119,19 @@ public class FreeFlyCamera : MonoBehaviour
     private UnityEngine.Camera camera;
     private Renderer riverRenderer;
     private Renderer oceanRenderer;
+    private Renderer waterfallRenderer;
     private void OnPreRender()
     {
         var projInv = (camera.projectionMatrix).inverse;
         var viewInv = (camera.worldToCameraMatrix).inverse;
         riverRenderer.sharedMaterial.SetMatrix("_ProjInverse", projInv);
         riverRenderer.sharedMaterial.SetMatrix("_ViewInverse", viewInv);
+        var pi = Matrix4x4.identity;
+        var vi = Matrix4x4.identity;
         oceanRenderer.sharedMaterial.SetMatrix("_ProjInverse", projInv);
         oceanRenderer.sharedMaterial.SetMatrix("_ViewInverse", viewInv);
+        waterfallRenderer.sharedMaterial.SetMatrix("_ProjInverse", projInv);
+        waterfallRenderer.sharedMaterial.SetMatrix("_ViewInverse", viewInv);
     }
 
     // Apply requested cursor state

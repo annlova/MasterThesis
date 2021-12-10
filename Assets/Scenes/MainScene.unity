@@ -7212,6 +7212,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35c68758dd3d29648aef0161962e8160, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  seed: 0
   stepDeltaTime: 0.05
   maxCliffWalkReverts: 100000
   numAcres: {x: 5, y: 6}

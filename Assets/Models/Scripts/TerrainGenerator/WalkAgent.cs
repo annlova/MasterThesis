@@ -190,42 +190,39 @@ namespace TerrainGenerator
           var acreTileX = trialPos.x % acreSize;
           var acreTileY = trialPos.y % acreSize;
           var possibleWaterfall = false;
-          if (cliffElevation == tile.acre.elevation)
+          if (forward == Vector2Int.up) // DOWN
           {
-            if (forward == Vector2Int.up) // DOWN
+            if (tile.acre.hasRiver &&
+                tile.acre.hasRiverWest &&
+                tile.acre.riverWestFlowsWest &&
+                tile.acre.hasWestCliff &&
+                acreTileY > acreSize / 2 - (int) Math.Ceiling(riverWidth / 2.0f) &&
+                acreTileY <= acreSize / 2 + riverWidth / 2)
             {
-              if (tile.acre.hasRiver &&
-                  tile.acre.hasRiverWest &&
-                  tile.acre.riverWestFlowsWest &&
-                  tile.acre.hasWestCliff &&
-                  acreTileY > acreSize / 2 - (int) Math.Ceiling(riverWidth / 2.0f) &&
-                  acreTileY <= acreSize / 2 + riverWidth / 2)
-              {
-                possibleWaterfall = true;
-              }
+              possibleWaterfall = true;
             }
-            else if (forward == Vector2Int.right)
+          }
+          else if (forward == Vector2Int.right)
+          {
+            if (tile.acre.hasRiver &&
+                tile.acre.hasRiverSouth &&
+                tile.acre.hasSouthCliff &&
+                acreTileX > acreSize / 2 - (int) Math.Ceiling(riverWidth / 2.0f) &&
+                acreTileX <= acreSize / 2 + riverWidth / 2)
             {
-              if (tile.acre.hasRiver &&
-                  tile.acre.hasRiverSouth &&
-                  tile.acre.hasSouthCliff &&
-                  acreTileX > acreSize / 2 - (int) Math.Ceiling(riverWidth / 2.0f) &&
-                  acreTileX <= acreSize / 2 + riverWidth / 2)
-              {
-                possibleWaterfall = true;
-              }
+              possibleWaterfall = true;
             }
-            else if (forward == Vector2Int.down) // UP
+          }
+          else if (forward == Vector2Int.down) // UP
+          {
+            if (tile.acre.hasRiver &&
+                tile.acre.hasRiverEast &&
+                tile.acre.riverEastFlowsEast &&
+                tile.acre.hasEastCliff &&
+                acreTileY > acreSize / 2 - (int) Math.Ceiling(riverWidth / 2.0f) &&
+                acreTileY <= acreSize / 2 + riverWidth / 2)
             {
-              if (tile.acre.hasRiver &&
-                  tile.acre.hasRiverEast &&
-                  tile.acre.riverEastFlowsEast &&
-                  tile.acre.hasEastCliff &&
-                  acreTileY > acreSize / 2 - (int) Math.Ceiling(riverWidth / 2.0f) &&
-                  acreTileY <= acreSize / 2 + riverWidth / 2)
-              {
-                possibleWaterfall = true;
-              }
+              possibleWaterfall = true;
             }
           }
           
@@ -558,7 +555,7 @@ namespace TerrainGenerator
         tile.possibleWaterfall = possibleWaterfall;
         if (possibleWaterfall)
         {
-          tile.acre.waterfallTiles.Add(tile);
+          tile.acre.waterfallTiles[elevation].Add(tile);
           tile.acre.waterfallDir = agent.right;
           tile.isWaterfall = true;
         }
@@ -593,7 +590,7 @@ namespace TerrainGenerator
         tile.possibleWaterfall = possibleWaterfallBefore;
         if (!possibleWaterfallBefore)
         {
-          tile.acre.waterfallTiles.Remove(tile);
+          tile.acre.waterfallTiles[elevation].Remove(tile);
           tile.isWaterfall = false;
         }
         tile.elevation = tile.acre.elevation;
