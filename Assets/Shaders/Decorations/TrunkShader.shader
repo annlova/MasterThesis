@@ -12,33 +12,39 @@ Shader "Unlit/TrunkShader"
     {
         Pass
         {
+            Tags { "LightMode"="ForwardBase" }
+            
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
 
             #include "UnityCG.cginc"
 
+            #pragma multi_compile_fwdbase
+            #include "AutoLight.cginc"
+            
             float diffuse(float3 normal, float3 lightDir);
             float calcGradientAmount(float3 normal);
 
-            struct VertexAttributes
-            {
-                float4 pos : POSITION;
-                float2 uv : TEXCOORD0;
-                float4 tan : TANGENT;
-                float3 nor : NORMAL;
-                float2 rng : TEXCOORD1;
-            };
+            // struct VertexAttributes
+            // {
+            //     float4 pos : POSITION;
+            //     float2 uv : TEXCOORD0;
+            //     float4 tan : TANGENT;
+            //     float3 nor : NORMAL;
+            //     float2 rng : TEXCOORD1;
+            // };
 
             struct FragmentAttributes
             {
-                float4 clipPos : POSITION;
+                float4 pos : POSITION;
                 float4 worldPos : TEXCOORD0;
                 float4 tideHeight : TIDE;
                 float2 st : TEXCOORD1;
                 float3x3 tbn : MATRIX;
                 float3 nor : NORMAL;
                 float rng : RANDOM;
+                LIGHTING_COORDS(2,3)
             };
 
             sampler2D _MainTex;
@@ -48,7 +54,7 @@ Shader "Unlit/TrunkShader"
 
             float _ColorMultiplier;
 
-            FragmentAttributes vert (VertexAttributes input)
+            FragmentAttributes vert (appdata_full v)
             {
                 // The output struct for the fragment stage.
                 FragmentAttributes output;
@@ -68,24 +74,26 @@ Shader "Unlit/TrunkShader"
                 
                 output.tideHeight = float4(-0.8f + tideOffset, -0.8f - tideChange, -0.8f + tideChange, 0.0f);
                 
-                float3 tangent = input.tan.xyz * input.tan.w;
-                float3 bitangent = cross(input.nor, input.tan.xyz) * input.tan.w;
-                float3 normal = input.nor;
+                float3 tangent = v.tangent.xyz * v.tangent.w;
+                float3 bitangent = cross(v.normal, v.tangent.xyz) * v.tangent.w;
+                float3 normal = v.normal;
 
                 float3 T = normalize(float3(UnityObjectToWorldDir(tangent)));
                 float3 B = normalize(float3(UnityObjectToWorldDir(bitangent)));
                 float3 N = normalize(float3(UnityObjectToWorldDir(normal)));
                 output.tbn = transpose(float3x3(T, B, N));
 
-                float4 modelPos = input.pos;
+                float4 modelPos = v.vertex;
                 
                 output.worldPos = mul(unity_ObjectToWorld, modelPos);
-                output.clipPos = UnityObjectToClipPos(modelPos);
-                output.nor = UnityObjectToWorldNormal(input.nor);
+                output.pos = UnityObjectToClipPos(modelPos);
+                output.nor = UnityObjectToWorldNormal(v.normal);
 
-                output.st = input.uv;
+                output.st = v.texcoord;
 
-                output.rng = input.rng.x;
+                output.rng = v.texcoord1.x;
+
+                TRANSFER_VERTEX_TO_FRAGMENT(output);
                 
                 return output;
             }
@@ -97,6 +105,7 @@ Shader "Unlit/TrunkShader"
                 float3 color = tex2D(_MainTex, st).rgb;
                 float3 normal = tex2D(_NormMap, st).rgb;
                 normal = normalize(mul(input.tbn, normal));
+                
                 float2 gradientSample = float2(calcGradientAmount(normal), 0.0f);
                 float3 gradient = tex2D(_GradientMap, gradientSample).rgb;
                 float3 roughness = tex2D(_RoughnessMap, st).rgb;
@@ -114,7 +123,8 @@ Shader "Unlit/TrunkShader"
                 color *= lerp(0.5f, 1.2f, input.rng);
                 
                 float ambient = 0.0f;
-                float diff = diffuse(normal, _WorldSpaceLightPos0);
+                float attenuation = LIGHT_ATTENUATION(input);
+                float diff = diffuse(normal, _WorldSpaceLightPos0) * attenuation;
                 float3 outColor = color * (ambient + diff) * _ColorMultiplier;
 
                 // float wet = 1.0f - smoothstep(input.tideHeight.x - 0.03f, input.tideHeight.x, input.worldPos.y);//smoothstep(-0.5f, input.tideHeight.x, input.worldPos.y);
@@ -138,4 +148,6 @@ Shader "Unlit/TrunkShader"
             ENDHLSL
         }
     }
+    
+    Fallback "VertexLit"
 }

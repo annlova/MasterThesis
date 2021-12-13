@@ -12,9 +12,9 @@ Shader "Unlit/CalmWaterShader"
     }
     SubShader
     {
-        Tags { "Queue"="Geometry" "RenderType"="Opaque" }
+        Tags { "Queue"="Geometry+1" "RenderMode"="Opaque"  "LightMode" = "ForwardBase" }
         Blend SrcAlpha OneMinusSrcAlpha
-
+        ZWrite On
         Pass
         {
             HLSLPROGRAM
@@ -23,6 +23,9 @@ Shader "Unlit/CalmWaterShader"
 
             #include "UnityCG.cginc"
             #include "UnityShaderVariables.cginc"
+
+            #pragma multi_compile_fwdbase
+            #include "AutoLight.cginc"
 
             float3 getColor(float2 st);
             float2 getDisplacementVector(float3 displacement, float displacementFactor);
@@ -33,20 +36,14 @@ Shader "Unlit/CalmWaterShader"
             float nsin(float rad);
             float random2 (float2 st);
 
-            struct VertexAttributes
-            {
-                float4 pos : POSITION;
-                float2 uv : TEXCOORD0;
-                float2 dir : TEXCOORD1;
-            };
-
             struct FragmentAttributes
             {
-                float4 clipPos : POSITION;
+                float4 pos : POSITION;
                 float4 worldPos : TEXCOORD0;
                 float2 st : TEXCOORD1;
                 float2 dir : TEXCOORD2;
                 float4 screenPos : TEXCOORD3;
+                LIGHTING_COORDS(4,5)
             };
 
             sampler2D _CalmWaveTex;
@@ -62,20 +59,22 @@ Shader "Unlit/CalmWaterShader"
             float4x4 _ProjInverse;
             float4x4 _ViewInverse;
 
-            FragmentAttributes vert (VertexAttributes input)
+            FragmentAttributes vert (appdata_full v)
             {
                 // The output struct for the fragment stage.
                 FragmentAttributes output;
 
-                float4 modelPos = input.pos;
+                float4 modelPos = v.vertex;
 
                 output.worldPos = mul(unity_ObjectToWorld, modelPos);
-                output.clipPos = UnityObjectToClipPos(modelPos);
+                output.pos = UnityObjectToClipPos(modelPos);
                 
-                output.st = input.uv;
-                output.dir = input.dir;
+                output.st = v.texcoord;
+                output.dir = v.texcoord1;
 
-                output.screenPos = ComputeScreenPos(output.clipPos);
+                output.screenPos = ComputeScreenPos(output.pos);
+
+                TRANSFER_VERTEX_TO_FRAGMENT(output);
                 
                 return output;
             }
@@ -104,6 +103,11 @@ Shader "Unlit/CalmWaterShader"
                 float3 world = WorldPosFromDepth(uv, depth);
                 float d = distance(input.worldPos, world);
                 ///
+
+                /// Calculate if in shadow //
+                float attenuation = LIGHT_ATTENUATION(input);
+                float inLight = step(1.0f, attenuation);
+                /// 
                 
                 /// Change for more aggressive displacement //
                 float displacementFactor = 0.1f;//0.03f;
@@ -120,7 +124,7 @@ Shader "Unlit/CalmWaterShader"
                 ///
 
                 /// Calculate displacement with displacement texture //
-                float3 displacement = tex2D(_WaveDisplacementTex, input.st * .1 + timeFactor* 0.5);
+                float3 displacement = tex2D(_WaveDisplacementTex, input.st * 0.1f + timeFactor* 0.5);
                 ///
 
                 /// Get scrolled and displaced wave texture coordinates //
@@ -166,10 +170,11 @@ Shader "Unlit/CalmWaterShader"
                 // float spec = pow(max(displacement.r+0.2, 0.0f), 32);
                 // float3 specular = specularStrength * spec * (1.0f).xxx;
                 // specular = clamp(0.0f, 1.0f, specular);
-
+                
                 // return float4(d,d,d, 1);
                 // return float4(waterColor2, 1.0f);
-                return float4(lerp(waterColor2, waterColor2 * 1.5f, alpha) * float3(0.3f, 0.99f, 1.2f), 1.0f);
+                float shadowFactor = lerp(0.5f, 1.0f, attenuation);
+                return float4(lerp(waterColor2, waterColor2 * 1.5f, alpha) * float3(0.3f, 0.99f, 1.2f) * shadowFactor, 1.0f);
                 return float4(outColor * min((1 - isWater), 1)
                     + waterColor * min(isWater, 1)
                     , 1);
@@ -298,5 +303,30 @@ Shader "Unlit/CalmWaterShader"
             
             ENDHLSL
         }
+        
+//        Pass
+//        {
+//            Tags{ "Queue"="Transparent" "RenderMode"="Transparent" "LightMode" = "ShadowCaster" }
+//            ZWrite On
+//            CGPROGRAM
+//            #pragma vertex VSMain
+//            #pragma fragment PSMain
+//
+//            #include "UnityCG.cginc"
+//            
+//            float4 VSMain (float4 vertex:POSITION) : SV_POSITION
+//            {
+//                return UnityObjectToClipPos(vertex);
+//            }
+// 
+//            float4 PSMain (float4 vertex:SV_POSITION) : SV_TARGET
+//            {
+//                if (unity_LightShadowBias.z != 0.0) discard;
+//                return 0;
+//            }
+//
+//            ENDCG
+//        }
     }
+//    Fallback "VertexLit"
 }

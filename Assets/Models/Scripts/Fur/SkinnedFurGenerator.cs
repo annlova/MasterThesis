@@ -8,6 +8,8 @@ public class SkinnedFurGenerator : MonoBehaviour
 {
     private GameObject mesh;
 
+    [SerializeField] private Material shadowCasterMaterial;
+    
     [SerializeField]
     [Range(0.0f, 0.04f)]
     private float shellDistance;
@@ -69,10 +71,12 @@ public class SkinnedFurGenerator : MonoBehaviour
         
         UpdatePrevVariables();
     }
-    
 
     void CreateShells()
     {
+        // var shadowCasterObject = Instantiate(mesh, transform.position, Quaternion.identity, transform);
+        // shadowCasterObject.GetComponent<Renderer>().material = shadowCasterMaterial;
+        
         for (int i = 0; i < numberOfLayers; i++)
         {
             var o = Instantiate(mesh, transform.position, Quaternion.identity, transform);
@@ -93,7 +97,7 @@ public class SkinnedFurGenerator : MonoBehaviour
 
             mat.SetVector("_LightColor", sun.color);
             
-            mat.renderQueue = 3016 + i;
+            mat.renderQueue = 2116 + i;
         }
     }
 

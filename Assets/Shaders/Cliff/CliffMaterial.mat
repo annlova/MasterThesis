@@ -87,6 +87,10 @@ Material:
         m_Texture: {fileID: 2800000, guid: 476fc49b0de978643a4644da457089a4, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _SpecMap:
+        m_Texture: {fileID: 2800000, guid: 7a8318491fc700e4a923ca1bb94ff335, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Floats:
     - _BumpScale: 1
     - _ColorMultiplier: 1

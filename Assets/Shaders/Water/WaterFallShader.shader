@@ -37,6 +37,7 @@ Shader "Unlit/WaterFallShader"
             {
                 float4 pos : POSITION;
                 float2 uv : TEXCOORD0;
+                float2 uv2 : TEXCOORD1;
             };
 
             struct FragmentAttributes
@@ -78,7 +79,7 @@ Shader "Unlit/WaterFallShader"
                 output.st = input.uv;
 
                 // Calm water shader vert
-                output.dir = float2(0.0f, 1.0f);
+                output.dir = input.uv2;
                 output.screenPos = ComputeScreenPos(output.clipPos);
                 
                 return output;
@@ -123,7 +124,8 @@ Shader "Unlit/WaterFallShader"
             float4 calmFragShader(FragmentAttributes input)
             {
                 float2 st = frac(float2(input.worldPos.x, input.worldPos.z));
-                input.dir = -input.dir;
+                input.dir = float2(-input.dir.x, input.dir.y);
+                
                 /// To calculate depth //
                 float2 uv = input.screenPos.xy / input.screenPos.w;
                 float depth = 1.0f - SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, uv);
@@ -147,7 +149,7 @@ Shader "Unlit/WaterFallShader"
                 ///
 
                 /// Calculate displacement with displacement texture //
-                float3 displacement = tex2D(_WaveDisplacementTex, st * .1 + timeFactor* 0.5);
+                float3 displacement = tex2D(_WaveDisplacementTex, st * 0.1f + timeFactor* 0.5);
                 ///
 
                 /// Get scrolled and displaced wave texture coordinates //
@@ -164,7 +166,7 @@ Shader "Unlit/WaterFallShader"
                 float2 displacedStWaterTex1 =  scrolledStTex2 + getDisplacementVector(displacement, displacementFactor);
                 float2 displacedStWaterTex2 =  scrolledStTex1 + getDisplacementVector(displacement, displacementFactor);
                 //
-
+                
                 /// Sample from textures //
                 float3 tex1Color = tex2D(_CalmWaveTex, displacedStTex1 / 2.0f);
                 float3 tex2Color = tex2D(_CalmWaveTex2, displacedStTex2 / 2.0f);
@@ -172,6 +174,7 @@ Shader "Unlit/WaterFallShader"
                 float3 waterColor = tex2D(_WaterTex, st) * (clamp(1.0 - d * 0.5, 0.0f, 1.0f) / 3 + 0.5); // reverse depth colors
                 // float3 waterColor = tex2D(_WaterTex, displacedStWaterTex1) * clamp(d, 0.5f, 1.0f);
                 float3 waterColor2 = tex2D(_WaterTex2, displacedStWaterTex2) * clamp(d, 0.5f, 1.0f);
+                
                 ///
                 
                 waterColor = lerp(waterColor, waterColor2, d * 0.6f); // Interpolate water textures
@@ -235,12 +238,9 @@ Shader "Unlit/WaterFallShader"
 
             float2 getDisplacementVector(float3 displacement, float displacementFactor)
             {
-                float2 displacementVector = float2(displacement.r, displacement.r) * displacementFactor * 2 - 1;
+                float2 displacementVector = float2(displacement.r, displacementFactor) * displacementFactor * 2 - 1;
 
                 return displacementVector;
-                //float2 displacedSt = st + displacementVector;
-                
-                //return displacedSt;
             }
             
             float3 ambient()

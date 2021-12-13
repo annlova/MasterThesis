@@ -17,7 +17,7 @@ namespace Camera
             waterfallRenderer = GameObject.Find("TerrainGenerator").transform.Find("WaterfallRender").GetComponent<Renderer>();
             oceanRenderer = GameObject.Find("TerrainGenerator").transform.Find("OceanRender").GetComponent<Renderer>();
             
-            offset = new Vector3(0, 5.9f, -3.76f);     // Distance from player character
+            offset = new Vector3(0, 7.9f, -5.76f);     // Distance from player character
             angle = 51;                                     // Camera angle
         
             transform.Rotate(Vector3.right, angle);

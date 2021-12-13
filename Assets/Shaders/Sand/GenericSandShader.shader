@@ -10,6 +10,7 @@ Shader "Unlit/GenericSandShader"
     }
     SubShader
     {
+        Tags { "LightMode" = "ForwardBase" }
         Pass
         {
             HLSLPROGRAM
@@ -18,25 +19,21 @@ Shader "Unlit/GenericSandShader"
 
             #include "UnityCG.cginc"
 
+            #pragma multi_compile_fwdbase
+            #include "AutoLight.cginc"
+
             float diffuse(float3 normal, float3 lightDir);
             float calcGradientAmount(float3 normal);
 
-            struct VertexAttributes
-            {
-                float4 pos : POSITION;
-                float2 uv : TEXCOORD0;
-                float4 tan : TANGENT;
-                float3 nor : NORMAL;
-            };
-
             struct FragmentAttributes
             {
-                float4 clipPos : POSITION;
+                float4 pos : POSITION;
                 float4 worldPos : TEXCOORD0;
                 float4 tideHeight : TIDE;
                 float2 st : TEXCOORD1;
                 float3x3 tbn : MATRIX;
                 float3 nor : NORMAL;
+                LIGHTING_COORDS(2,3)
             };
 
             sampler2D _MainTex;
@@ -45,7 +42,7 @@ Shader "Unlit/GenericSandShader"
             sampler2D _RoughnessMapWet;
             sampler2D _RoughnessMapDry;
 
-            FragmentAttributes vert (VertexAttributes input)
+            FragmentAttributes vert (appdata_tan v)
             {
                 // The output struct for the fragment stage.
                 FragmentAttributes output;
@@ -59,28 +56,34 @@ Shader "Unlit/GenericSandShader"
                 float drySpeed = 0.5f;
                 float dryTime = frac(time - animationTimeSkew) * drySpeed;
                 
-                float waveIn = -1.0f + smoothstep(0.0f, animationTimeSkew, waveTime) * 2.0f * step(waveTime, animationTimeSkew);
-                float waveOut = 1.0f - smoothstep(0.0f, 1.0f, dryTime) * 2.0f;
-                float tideOffset = max(waveIn, waveOut) * tideChange;
+                float waveIn = -1.0f + smoothstep(0.0f, animationTimeSkew, waveTime) * 2.0f;
+                float waveOut = 1.0f - smoothstep(animationTimeSkew, 1.0f, waveTime) * 2.0f;
+                float goingOut = step(animationTimeSkew, waveTime);
+                float tideOffset = (waveIn * (1.0f - goingOut) + waveOut * goingOut) * tideChange;
+                float beachIn = waveIn * step(waveTime, animationTimeSkew);
+                float beachOut = 1.0f - smoothstep(0.0f, 1.0f, dryTime) * 2.0f;
+                float wetOffset = max(beachIn, beachOut) * tideChange;
                 
-                output.tideHeight = float4(-0.8f + tideOffset, -0.8f - tideChange, -0.8f + tideChange, 0.0f);
+                output.tideHeight = float4(-0.8f + wetOffset, -0.8f - tideChange, -0.8f + tideChange, -0.8f + tideOffset);
                 
-                float3 tangent = input.tan.xyz * input.tan.w;
-                float3 bitangent = cross(input.nor, input.tan.xyz) * input.tan.w;
-                float3 normal = input.nor;
+                float3 tangent = v.tangent.xyz * v.tangent.w;
+                float3 bitangent = cross(v.normal, v.tangent.xyz) * v.tangent.w;
+                float3 normal = v.normal;
 
                 float3 T = normalize(float3(UnityObjectToWorldDir(tangent)));
                 float3 B = normalize(float3(UnityObjectToWorldDir(bitangent)));
                 float3 N = normalize(float3(UnityObjectToWorldDir(normal)));
                 output.tbn = transpose(float3x3(T, B, N));
 
-                float4 modelPos = input.pos;
+                float4 modelPos = v.vertex;
                 
                 output.worldPos = mul(unity_ObjectToWorld, modelPos);
-                output.clipPos = UnityObjectToClipPos(modelPos);
-                output.nor = UnityObjectToWorldNormal(input.nor);
+                output.pos = UnityObjectToClipPos(modelPos);
+                output.nor = UnityObjectToWorldNormal(v.normal);
 
-                output.st = input.uv;
+                output.st = v.texcoord;
+
+                TRANSFER_VERTEX_TO_FRAGMENT(output);
                 
                 return output;
             }
@@ -97,7 +100,8 @@ Shader "Unlit/GenericSandShader"
                 float3 gradient = tex2D(_GradientMap, gradientSample).rgb;
                 float3 roughness = tex2D(_RoughnessMapWet, st * 2.0f).rgb;
                 float3 roughness2 = tex2D(_RoughnessMapDry, st * 2.0f).rgb;
-                
+
+                float attenuation = LIGHT_ATTENUATION(input);
 
                 float wet = 1.0f - smoothstep(input.tideHeight.x - 0.03f, input.tideHeight.x, input.worldPos.y);//smoothstep(-0.5f, input.tideHeight.x, input.worldPos.y);
                 
@@ -107,13 +111,13 @@ Shader "Unlit/GenericSandShader"
                 float specularStrength = 10.0f * roughness;
                 float3 lightDir = normalize(float3(0.0f, 1.0f, 1.0f));
                 float3 reflectDir = reflect(-lightDir, float3(0.0f, 1.0f, 0.0f));
-                float spec = pow(max(dot(cameraDir, reflectDir), 0.0f), 32);
+                float spec = pow(max(dot(cameraDir, reflectDir), 0.0f), 32) * attenuation * step(input.tideHeight.w, input.worldPos.y);
                 float3 specular = specularStrength * spec * (1.0f).xxx;
 
                 // color = (color + gradient);
                 
                 float ambient = 0.6f;
-                float diff = diffuse(normal, _WorldSpaceLightPos0);
+                float diff = diffuse(normal, _WorldSpaceLightPos0) * attenuation;
                 float3 outColor = color * (ambient + diff + specular);
 
                 outColor *= (1.0f - ((1.0f - smoothstep(input.tideHeight.y, input.tideHeight.z, input.worldPos.y)) * 0.4f + 0.1f) * wet);
@@ -134,26 +138,7 @@ Shader "Unlit/GenericSandShader"
                 return d;//max((d - 0.75f) * 4.0f, 0.0f);
             }
             ENDHLSL
-        }
-        Pass
-        {
-            Tags{ "LightMode" = "ShadowCaster" }
-            CGPROGRAM
-            #pragma vertex VSMain
-            #pragma fragment PSMain
- 
-            float4 VSMain (float4 vertex:POSITION) : SV_POSITION
-            {
-                return UnityObjectToClipPos(vertex);
-            }
- 
-            float4 PSMain (float4 vertex:SV_POSITION) : SV_TARGET
-            {
-                return 0;
-            }
-
-            ENDCG
-        }
-        
+        }        
     }
+    Fallback "VertexLit"
 }

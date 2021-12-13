@@ -53,6 +53,8 @@ namespace TerrainGenerator
     public bool possibleWaterfall;
     
     public bool isBeach;
+
+    public List<Vector2> vertexDirtPatchData;
     
     public bool modified;
     

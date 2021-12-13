@@ -74,7 +74,7 @@ public class ShellGenerator : MonoBehaviour
 
     void CreateShells()
     {
-        for (int i = 0; i < numberOfLayers; i++)
+        for (int i = 1; i < numberOfLayers; i++)
         {
             var o = Instantiate(mesh, transform.position, Quaternion.identity, transform);
             var mat = o.GetComponent<Renderer>().material;
@@ -93,7 +93,7 @@ public class ShellGenerator : MonoBehaviour
 
             mat.SetVector("_LightColor", sun.color);
             
-            mat.renderQueue = 3000 + i;
+            mat.renderQueue = 2000 + i;
         }
     }
 

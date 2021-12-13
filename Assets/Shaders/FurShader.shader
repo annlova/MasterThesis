@@ -23,7 +23,7 @@ Shader "Unlit/FurShader"
     }
     SubShader
     {
-        Tags { "Queue"="Transparent" "RenderType"="Transparent" }
+        Tags { "Queue"="Transparent" "RenderType"="Transparent" "LightMode" = "ForwardBase" }
         Blend SrcAlpha OneMinusSrcAlpha
 
         Pass
@@ -35,6 +35,9 @@ Shader "Unlit/FurShader"
             #include "UnityShaderVariables.cginc"
             #include "UnityCG.cginc"
 
+            #pragma multi_compile_fwdbase
+            #include "AutoLight.cginc"
+            
             float3 getColor(float2 st, float3 bottom, float3 fur, float3 outmostFur);
             float3 ambient();
             float3 diffuse(float3 normal, float3 lightDir, float3 mask);
@@ -53,19 +56,13 @@ Shader "Unlit/FurShader"
             float snoise(float2 v);
             float snoiseNormalized(float2 v);
 
-            struct VertexAttributes
-            {
-                float4 pos : POSITION;
-                float4 nor : NORMAL;
-                float2 uv : TEXCOORD0;
-            };
-
             struct FragmentAttributes
             {
-                float4 clipPos : POSITION;
+                float4 pos : POSITION;
                 float4 worldPos: TEXCOORD0;
                 float3 worldNor : TEXCOORD1;
                 float2 st : TEXCOORD2;
+                LIGHTING_COORDS(3,4)
             };
 
             float _ShellDistance;
@@ -87,21 +84,23 @@ Shader "Unlit/FurShader"
 
             float4 _LightColor;
             
-            FragmentAttributes vert (VertexAttributes input)
+            FragmentAttributes vert (appdata_base v)
             {
                 // The output struct for the fragment stage.
                 FragmentAttributes output;
 
                 // Create the layers
-                float4 modelPos = input.pos + input.nor * _ShellDistance * _Layer;
+                float4 modelPos = v.vertex + float4(v.normal * _ShellDistance * _Layer, 0.0f);
                 modelPos.w = 1;
                 
                 output.worldPos = mul(unity_ObjectToWorld, modelPos);
-                output.clipPos = UnityObjectToClipPos(modelPos);
+                output.pos = UnityObjectToClipPos(modelPos);
 
-                output.worldNor = normalize(UnityObjectToWorldNormal(input.nor.xyz));
+                output.worldNor = normalize(UnityObjectToWorldNormal(v.normal.xyz));
 
-                output.st = input.uv;
+                output.st = v.texcoord;
+
+                TRANSFER_VERTEX_TO_FRAGMENT(output);
                 
                 return output;
             }
@@ -115,6 +114,11 @@ Shader "Unlit/FurShader"
                 float3 mask = tex2D(_MaskTexture, input.st);
                 ///
 
+                /// Calculate if in shadow //
+                float attenuation = LIGHT_ATTENUATION(input);
+                /// 
+                
+
                 /// For clamping color //
                 float4 zeroVec = float4(0.0f, 0.0f, 0.0f, 0.0f);
                 float4 oneVec = float4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -127,7 +131,7 @@ Shader "Unlit/FurShader"
 
                 float3 color = (ambient() + diffuse(input.worldNor,
                     normalize(_WorldSpaceCameraPos - input.worldPos),
-                    mask)) * getColor(input.st, bottom, fur, outmostFur);
+                    mask) * attenuation) * getColor(input.st, bottom, fur, outmostFur);
                 
                 // To make sure color is between 0 and 1
                 color = clamp(color, zeroVec, oneVec);
@@ -301,4 +305,6 @@ Shader "Unlit/FurShader"
             ENDHLSL
         }
     }
+    
+    Fallback "VertexLit"
 }

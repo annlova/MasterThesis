@@ -8,6 +8,9 @@ Shader "Unlit/OceanShader"
         _WaterTex ("Texture for water (color mainly) 1", 2D) = "white" {}
         _WaterTex2 ("Texture for water (color mainly) 2", 2D) = "white" {}
         
+        _CausTex1 ("Caustic texture 1", 2D) = "white" {}
+        _CausTex2 ("Caustic texture 2", 2D) = "white" {}
+        
         _MainTex ("Texture", 2D) = "white" {}
     }
     SubShader
@@ -65,16 +68,19 @@ Shader "Unlit/OceanShader"
             sampler2D _WaveDisplacementTex;
             sampler2D _WaterTex;
             sampler2D _WaterTex2;
+
+            sampler2D _CausTex1;
+            sampler2D _CausTex2;
             
             sampler2D _CameraDepthTexture;
             
             FragmentAttributes vert (VertexAttributes input)
             {
                 FragmentAttributes output;
-                float tideChange = 0.15f;
-                float PI = 3.1415927;                             
-                float time = _Time.y * 0.2f;            
-                float waveTime = frac(time) * PI * 2.0f;       
+                const float tideChange = 0.15f;
+                const float PI = 3.1415927;                             
+                const float time = _Time.y * 0.2f;            
+                const float waveTime = frac(time) * PI * 2.0f;       
 
                 float animationTimeSkew = 0.3f;
                 float waveIn = -1.0f + smoothstep(0.0f, animationTimeSkew, frac(time)) * 2.0f;
@@ -83,8 +89,9 @@ Shader "Unlit/OceanShader"
                 float tideOffset = (waveIn * (1.0f - goingOut) + waveOut * goingOut) * tideChange;
                 // float tideOffset = cos(waveTime) * tideChange;
                 output.tideHeight = float4(-0.8f + tideOffset, -0.8f - tideChange, -0.8f + tideChange, 0.0f);
-                
+
                 float4 modelPos = input.pos + float4(0.0f, tideOffset, 0.0f, 0.0f);
+                
                 output.worldPos = mul( modelPos, unity_ObjectToWorld);
                 output.clipPos = UnityObjectToClipPos(modelPos);
                 
@@ -121,7 +128,7 @@ Shader "Unlit/OceanShader"
                 float d = distance(input.worldPos, world);
                 // d *= 0.1;
                 // d = depth;
-                d = smoothstep(-2.5f, 0.0f, input.heightMap);
+                d = smoothstep(-2.0f, 0.0f, input.heightMap);
                 ///
 
                 /// Change for more aggressive displacement //
@@ -130,12 +137,15 @@ Shader "Unlit/OceanShader"
                 ///
 
                 /// Change for faster scrolling //
-                float timeFactor = _Time.y / 15;
+                float timeFactor = _Time.y / 30;
                 ///
 
                 /// Scrolling texture thresholds //
-                float higherThresholdWaves = 0.70f;//1.0f;
-                float lowerThresholdWaves = 0.68f;
+                float higherThresholdWaves = 0.9f;//1.0f;
+                float lowerThresholdWaves = 0.10f;
+
+                float highCaus = 0.70f;
+                float lowCaus = 0.68f;
                 ///
 
                 /// Calculate displacement with displacement texture //
@@ -158,16 +168,27 @@ Shader "Unlit/OceanShader"
                 //
 
                 /// Sample from textures //
-                float3 tex1Color = tex2D(_CalmWaveTex, displacedStTex1 / 2.0f);
-                float3 tex2Color = tex2D(_CalmWaveTex2, displacedStTex2 / 2.0f);
+                float3 tex1Color = tex2D(_CalmWaveTex, displacedStTex1 *  1.0f);
+                float3 tex2Color = tex2D(_CalmWaveTex2, displacedStTex2 * 1.0f);
                 
-                float3 waterColor2 = tex2D(_WaterTex2, displacedStWaterTex2) * lerp(0.5f, 1.0f, d);
+                float3 caustic1Color = tex2D(_CausTex1, displacedStTex1 *  0.8f);
+                float3 caustic2Color = tex2D(_CausTex2, displacedStTex2 * 0.8f);
+                
+                float3 waterColor2 = tex2D(_WaterTex2, displacedStWaterTex2) * lerp(0.5f, 1.5f, d);
 
                 float3 outColor = tex1Color + tex2Color; // Add together wave textures
-
+                float3 causColor = caustic1Color + caustic2Color; // Add together wave textures
+                
                 float alphaCalmWater = computeAlpha(outColor.r, clamp(d, 0.0f, 1.0f), higherThresholdWaves, lowerThresholdWaves); // Compute alpha for waves
+                float alphaCasutics = computeAlpha(causColor.r, clamp(d, 0.0f, 1.0f), highCaus, lowCaus); // Compute alpha for waves
 
-                float3 calmWaterColor = lerp(waterColor2, waterColor2 * 1.5f, alphaCalmWater) * float3(0.3f, 0.99f, 1.2f);
+                float alphaWaveAndCaus = alphaCalmWater + alphaCasutics;
+                
+                float3 calmWaterColor = lerp(waterColor2, waterColor2 * 1.5f, alphaWaveAndCaus) * float3(0.3f, 0.99f, 1.2f);
+                calmWaterColor.r -= 0.2f;
+                calmWaterColor.g -= 0.2f;
+                calmWaterColor.b -= 0.1f;
+                calmWaterColor *= 1.2f;
                 
                 float tideChange = 0.15f;
                 float PI = 3.1415927;                             
@@ -185,7 +206,7 @@ Shader "Unlit/OceanShader"
                 float h = input.heightMap;
                 float factor = 1.0f - step(input.worldPos.y - 3.0f, h);
 
-                float foamEdgeThicknessMin = 0.05f;
+                float foamEdgeThicknessMin = 0.07f;
                 // float foamEdgeThicknessMax = smoothstep(input.tideHeight.y, input.tideHeight.z, input.worldPos.y) * 0.3f;
                 float foamEdgeThicknessMax = (cos(waveTime) + 1.0f) / 2.0f * 0.3f;
                 float foam = nsnoise(input.worldPos.xz) * foamEdgeThicknessMax + foamEdgeThicknessMin;
@@ -193,7 +214,7 @@ Shader "Unlit/OceanShader"
                 float a = lerp(0.0f, PI * 1.7f, frac(_Time.y * 0.2f));
                 // waveFactor = max(step(0.995f, ncos(h - a)), waveFactor);
                 float3 waveCol = lerp(calmWaterColor, white, waveFactor);
-                return float4(waveCol, 1.0f);
+                return float4(waveCol, min(1.0f, 0.4f + 0.6f * smoothstep(0.0f, 4.0f, input.worldPos.y - h) + step(1.0f, waveFactor)));
             }
 
              /**

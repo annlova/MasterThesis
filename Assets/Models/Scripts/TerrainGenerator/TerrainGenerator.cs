@@ -4,9 +4,11 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Xml.Schema;
 using Microsoft.Win32.SafeHandles;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Analytics;
 using UnityEngine.Assertions;
+using UnityEngine.Rendering;
 using Random = UnityEngine.Random;
 
 namespace TerrainGenerator
@@ -15,6 +17,18 @@ namespace TerrainGenerator
     {
         [SerializeField] 
         private int seed;
+        
+        [SerializeField] 
+        private bool spawnSlopes;
+        
+        [SerializeField] 
+        private bool spawnRivers;
+        
+        [SerializeField] 
+        private bool spawnDecorations;
+        
+        [SerializeField] 
+        private bool spawnWaterfalls;
         
         [SerializeField]
         private float stepDeltaTime;
@@ -119,14 +133,23 @@ namespace TerrainGenerator
         [SerializeField]
         private GameObject oceanGridPrefab;
         
+        [SerializeField]
+        private int gridSizeFactor;
+        
         [SerializeField] 
         private GameObject waterfallPrefab;
 
         [SerializeField]
         private GameObject treeCanopyPrefab;
 
+        [SerializeField] 
+        private float canopyRadius;
+
         [SerializeField]
         private GameObject treeTrunkPrefab;
+        
+        [SerializeField]
+        private float treeTrunkRadius;
         
         [SerializeField]
         private GameObject rockPrefab;
@@ -208,10 +231,23 @@ namespace TerrainGenerator
             LevelTerrain();
             ComputeCliffFloors();
             ComputeRiverMeta();
-            ComputeRivers();
-            ComputeSlopes();
-            SpawnDecorations();
-            ComputeWaterfalls();
+            if (spawnRivers)
+            {
+                ComputeRivers();
+            }
+            if (spawnSlopes)
+            {
+                ComputeSlopes();
+            }
+            if (spawnDecorations)
+            {
+                SpawnDecorations();
+            }
+            if (spawnWaterfalls)
+            {
+                ComputeWaterfalls();
+            }
+            ComputeDirtPatches();
             CreateTerrainMesh();
             UpdateShaderVariables();
         }
@@ -422,6 +458,14 @@ namespace TerrainGenerator
                                 // TODO
                                 if (tile.isRiverEdge)
                                 {
+                                    var mesh = floorObj.GetComponent<MeshFilter>().mesh;
+                                    var uv2 = new Vector2[mesh.vertices.Length];
+                                    for (int i = 0; i < uv2.Length; i++)
+                                    {
+                                        uv2[i] = tile.vertexDirtPatchData[i];
+                                    }
+                                    mesh.uv2 = uv2;
+                                    
                                     var riverEdgePrefab = cliffTiles[9].prefab;
                                     var rot = Quaternion.FromToRotation(Vector3.back,
                                         new Vector3(tile.riverEdgeDir.x, 0.0f, -tile.riverEdgeDir.y));
@@ -566,12 +610,21 @@ namespace TerrainGenerator
                             // Set all normals straight up
                             var mesh = o.GetComponent<MeshFilter>().mesh;
                             var normals = mesh.normals;
+                            var uv2 = new Vector2[normals.Length];
                             for (int i = 0; i < normals.Length; i++)
                             {
                                 normals[i] = Quaternion.Euler(-angleDeg, 0.0f, 0.0f) * Vector3.up;
+                                if (prefab == flatTilePrefab)
+                                {
+                                    uv2[i] = tile.vertexDirtPatchData[i];
+                                }
                             }
                             
                             mesh.normals = normals;
+                            if (prefab == flatTilePrefab)
+                            {
+                                mesh.uv2 = uv2;
+                            }
 
                             if ((tile.isSlopeEdge1 || tile.isSlopeEdge2) && tile.isSlopeLower)
                             {
@@ -605,7 +658,20 @@ namespace TerrainGenerator
                             var p = new Vector3(x + 0.5f, tile.elevation * elevationHeight - riverOffset, height - 1 - z + 0.5f);
 
                             var floorObj = Instantiate(flatTilePrefab, p, Quaternion.identity, transform);
-                            setRiverDistAttribute(tile, floorObj);
+                            var mesh = floorObj.GetComponent<MeshFilter>().mesh;
+                            var uv2 = new Vector2[mesh.vertices.Length];
+                            for (int i = 0; i < uv2.Length; i++)
+                            {
+                                var a = tile.vertexDirtPatchData[i];
+                                if (!a.Equals(new Vector2(50.0f, 50.0f)) &&
+                                    !a.Equals(new Vector2(30.0f, 70.0f)))
+                                {
+                                    Debug.Log(tile.pos);
+                                }
+                                uv2[i] = tile.vertexDirtPatchData[i];
+                            }
+                            mesh.uv2 = uv2;
+                            // setRiverDistAttribute(tile, floorObj);
                             // TODO
                             if (tile.isRiverEdge)
                             {
@@ -654,6 +720,12 @@ namespace TerrainGenerator
                     {
                         tileValues[x + z * width].x = 1.0f;
                     }
+
+                    var islandFactor = (float) tile.acre.islandIndex / (numIslands - 1) * 0.8f;
+                    tileValues[x + z * width].x = 0.2f + islandFactor;
+                    tileValues[x + z * width].y = 0.2f + islandFactor;
+                    tileValues[x + z * width].z = 0.2f + islandFactor;
+
                 }
             }
             tileValueBuffer.SetData(tileValues);
@@ -731,7 +803,7 @@ namespace TerrainGenerator
             var uv2 = new Vector2[vertices.Length];
             for (int i = 0; i < uv2.Length; i++)
             {
-                float height = beachHeights[(int) (vertices[i].x + 0.3f) + (int) (vertices[i].z + 0.3f) * (acreSize + 1)];
+                float height = beachHeights[(int) (vertices[i].x * gridSizeFactor + 0.3f) + (int) (vertices[i].z * gridSizeFactor + 0.3f) * (acreSize * gridSizeFactor + 1)];
                 uv2[i] = new Vector2(height, 0.0f);
             }
 
@@ -741,14 +813,15 @@ namespace TerrainGenerator
         private float[] CreateBeach(Vector3 pos, bool riverOutlet)
         {
             var size = acreSize + 1;
+            var trueSize = acreSize * gridSizeFactor + 1;
             var beach = Instantiate(beachGridPrefab, pos, beachGridPrefab.transform.rotation, transform);
             var mesh = beach.GetComponent<MeshFilter>().mesh;
             
             var vertices = mesh.vertices;
             var normals = mesh.normals;
 
-            Assert.IsTrue(vertices.Length == size * size);
-            var beachHeight = new float[size * size];
+            Assert.IsTrue(vertices.Length == trueSize * trueSize);
+            var beachHeight = new float[trueSize * trueSize];
             
             for (int i = 0; i < vertices.Length; i++)
             {
@@ -760,6 +833,7 @@ namespace TerrainGenerator
                 {
                     outletHalfWidth += Math.Max((size / 6.0f) - vertices[i].z / 6.0f, 0.0f);
                 }
+                
                 if (vertices[i].x >= size / 2.0f - outletHalfWidth &&
                     vertices[i].x <= size / 2.0f + outletHalfWidth &&
                     riverOutlet)
@@ -768,8 +842,16 @@ namespace TerrainGenerator
                 }
                 vertices[i] = vertices[i] + Vector3.down * offset;
 
-                var index = (int) (vertices[i].x + 0.3f) + (int) (vertices[i].z + 0.3f) * size;
+                var index = (int) (vertices[i].x * gridSizeFactor + 0.3f) + (int) (vertices[i].z * gridSizeFactor + 0.3f) * trueSize;
                 beachHeight[index] = vertices[i].y;
+                if (worldPos.z >= 0.0f && worldPos.x > 0.0f && worldPos.x < width)
+                {
+                    var t = tiles[(int) worldPos.x, height - 2 - (int) worldPos.z];
+                    if (!t.isBeach)
+                    {
+                        beachHeight[index] = 0.4f;
+                    }
+                }
                 
                 // Calculate new normal
                 var worldPosN = worldPos + Vector3.forward;
@@ -829,8 +911,7 @@ namespace TerrainGenerator
                 if (px >= acreSize / 2 - (int) Math.Ceiling((riverWidth - 2) / 2.0f) &&
                     px <= width - acreSize / 2 + (int) Math.Ceiling((riverWidth - 2) / 2.0f) &&
                     pz >= acreSize / 2 - (int) Math.Ceiling((riverWidth - 2) / 2.0f) &&
-                    !tiles[px, height - 1 - pz].isBeach &&
-                    !tiles[px, height - 1 - pz].isCliff)
+                    !tiles[px, height - 1 - pz].isBeach)
                 {
                     return 1.0f;
                 }
@@ -1273,6 +1354,8 @@ namespace TerrainGenerator
             riversColliderObject = transform.Find("RiversCollider").gameObject;
             riversMeshFilter = riversRenderObject.GetComponent<MeshFilter>();
             riversRenderer = riversRenderObject.GetComponent<Renderer>();
+            riversRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            riversRenderer.receiveShadows = true;
             
             riversBottomRenderObject = transform.Find("RiversBottomRender").gameObject;
             riversBottomMeshFilter = riversBottomRenderObject.GetComponent<MeshFilter>();
@@ -2275,9 +2358,11 @@ namespace TerrainGenerator
                     var posLastTop = Vector2Int.zero;
                     var posFirstBot = Vector2Int.zero;
                     var posLastBot = Vector2Int.zero;
+                    int orientation = -1; // 0 = WEST, 1 = SOUTH, 2 = EAST
                     if (acre.waterfallDir.x > 0)
                     {
                         // EAST
+                        orientation = 2;
                         if (first.pos.x < last.pos.x)
                         {
                             posFirstTop = new Vector2Int(first.pos.x - 1, first.pos.y + 1);
@@ -2296,6 +2381,7 @@ namespace TerrainGenerator
                     else if (acre.waterfallDir.x < 0)
                     {
                         // WEST
+                        orientation = 0;
                         if (first.pos.x > last.pos.x)
                         {
                             posFirstTop = new Vector2Int(first.pos.x + 2, first.pos.y);
@@ -2305,8 +2391,8 @@ namespace TerrainGenerator
                         }
                         else
                         {
-                            posFirstTop = new Vector2Int(last.pos.x + 1, first.pos.y);
-                            posLastTop = new Vector2Int(last.pos.x + 1, last.pos.y + 1);
+                            posFirstTop = new Vector2Int(last.pos.x + 2, first.pos.y);
+                            posLastTop = new Vector2Int(last.pos.x + 2, last.pos.y + 1);
                             posFirstBot = new Vector2Int(first.pos.x, first.pos.y);
                             posLastBot = new Vector2Int(first.pos.x, last.pos.y + 1);
                         }
@@ -2314,6 +2400,7 @@ namespace TerrainGenerator
                     else
                     {
                         // SOUTH
+                        orientation = 1;
                         if (first.pos.y < last.pos.y)
                         {
                             posFirstTop = new Vector2Int(first.pos.x, first.pos.y - 1);
@@ -2403,14 +2490,26 @@ namespace TerrainGenerator
                         }
                     }
 
-                    CreateWaterfall(a, b, c, d, e, f, g, h, p);
+                    CreateWaterfall(a, b, c, d, e, f, g, h, p, acre.waterfallDir);
+                    var mistPos = Vector3.Lerp(c, d, 0.5f) + p;
+                    if (mistPos.y < -0.3f)
+                    {
+                        mistPos.y = -1.5f;
+                    }
+
+                    var mistRot = orientation == 0 ? -90.0f :
+                                      orientation == 2 ? 90.0f :
+                                      0.0f;
+                    
+                    // Instantiate(waterFallMistEmitter, mistPos, Quaternion.Euler(0.0f, 0.0f, mistRot), transform);
                     // Debug.Log("Waterfall! Width = " + waterfallWidth + ". start = " + start + ". end = " + end);
                 }
             }
         }
 
         private void CreateWaterfall(Vector3 a, Vector3 b, Vector3 c, Vector3 d, 
-                                    Vector3 e, Vector3 f, Vector3 g, Vector3 h, Vector3 p)
+                                    Vector3 e, Vector3 f, Vector3 g, Vector3 h, Vector3 p,
+                                    Vector2Int dir)
         {
             var n3d = b - a;
             var n2d = new Vector2(n3d.z, -n3d.x);
@@ -2428,12 +2527,14 @@ namespace TerrainGenerator
             var mesh = waterfall.GetComponent<MeshFilter>().mesh;
             var vertices = mesh.vertices;
             var normals = mesh.normals;
+            var uv2 = new Vector2[mesh.uv.Length];
             var bottomMesh = waterfallBottom.GetComponent<MeshFilter>().mesh;
             var verticesBottom = bottomMesh.vertices;
             var normalsBottom = bottomMesh.normals;
             // Assert.IsTrue(vertices.Length == 8);
             for (var i = 0; i < vertices.Length; i++)
             {
+                uv2[i] = dir;
                 var v = vertices[i];
                 if (Math.Abs(v.z) < 0.5f)
                 {
@@ -2513,15 +2614,16 @@ namespace TerrainGenerator
 
             mesh.vertices = vertices;
             mesh.normals = normals;
+            mesh.uv2 = uv2;
             bottomMesh.vertices = verticesBottom;
             bottomMesh.normals = normalsBottom;
-
+            
             var mistPos = Vector3.Lerp(c, d, 0.5f) + p;
             if (mistPos.y < -0.3f)
             {
                 mistPos.y = -1.5f;
             }
-            Instantiate(waterFallMistEmitter, mistPos, waterFallMistEmitter.transform.rotation, transform);
+            Instantiate(waterFallMistEmitter, mistPos, waterFallMistEmitter.transform.rotation * Quaternion.Euler(0.0f, 0.0f, angle), transform);
         }
 
         private Tile FindFirstCliffInAcre(Acre acre)
@@ -2662,12 +2764,6 @@ namespace TerrainGenerator
                                     continue;
                                 }
                                 
-                                bool waterfallTransition = false;
-                                if (p.x > 0)
-                                {
-                                    waterfallTransition = tiles[p.x - 1, p.y].isWaterfall;
-                                }
-                                
                                 var waterfallRow = false;
                                 for (var i = 1; i < riverWidth - 1; i++)
                                 {
@@ -2679,9 +2775,21 @@ namespace TerrainGenerator
                                         tt = tiles[pp.x - 1, pp.y];
                                     }
 
+                                    var wft = acre.waterfallTiles[tt.elevation];
+                                    if (i > 1 && i < riverWidth - 2 ||
+                                        wft.Count > 0 &&
+                                        !((tt == wft[0] ||
+                                           tt == wft[wft.Count - 1]) ||
+                                          (ttt == wft[0] ||
+                                           ttt == wft[wft.Count - 1])))
+                                    {
+                                        continue;
+                                    }
+
                                     if (tt.isWaterfall || ttt.isWaterfall)
                                     {
                                         waterfallRow = true;
+                                        break;
                                     }
                                 }
                                 
@@ -2725,12 +2833,6 @@ namespace TerrainGenerator
                                     continue;
                                 }
                                 
-                                bool waterfallTransition = false;
-                                if (p.x < width - 1)
-                                {
-                                    waterfallTransition = tiles[p.x + 1, p.y].isWaterfall;
-                                }
-                                
                                 var waterfallRow = false;
                                 for (var i = 1; i < riverWidth - 1; i++)
                                 {
@@ -2740,6 +2842,17 @@ namespace TerrainGenerator
                                     if (x < acreSize - 1)
                                     {
                                         tt = tiles[pp.x + 1, pp.y];
+                                    }
+
+                                    var wft = acre.waterfallTiles[tt.elevation];
+                                    if (i > 1 && i < riverWidth - 2 ||
+                                        wft.Count > 0 &&
+                                        !((tt == wft[0] ||
+                                           tt == wft[wft.Count - 1]) ||
+                                          (ttt == wft[0] ||
+                                           ttt == wft[wft.Count - 1])))
+                                    {
+                                        continue;
                                     }
 
                                     if (tt.isWaterfall || ttt.isWaterfall)
@@ -2799,6 +2912,17 @@ namespace TerrainGenerator
                                     if (y < acreSize - 1)
                                     {
                                         tt = tiles[pp.x, pp.y + 1];
+                                    }
+
+                                    var wft = acre.waterfallTiles[tt.elevation];
+                                    if (i > 1 && i < riverWidth - 2 ||
+                                        wft.Count > 0 &&
+                                        !((tt == wft[0] ||
+                                           tt == wft[wft.Count - 1]) ||
+                                          (ttt == wft[0] ||
+                                           ttt == wft[wft.Count - 1])))
+                                    {
+                                        continue;
                                     }
 
                                     if (tt.isWaterfall || ttt.isWaterfall)
@@ -3172,7 +3296,15 @@ namespace TerrainGenerator
             {
                 var p2 = points[i];
                 var tile = tiles[(int) p2.x, height - 1 - (int) p2.y];
-                if (tile.isCliff || tile.isBeach || tile.isSlope || tile.isRiver || tile.isWaterfall || tile.isRiverEdge)
+                if (tile.isCliff ||
+                    tile.isBeach ||
+                    tile.isSlope ||
+                    tile.isRiver ||
+                    tile.isWaterfall ||
+                    tile.isRiverEdge ||
+                    tile.isRiverTransition ||
+                    p2.x < canopyRadius || p2.x > width - canopyRadius ||
+                    p2.y > height - canopyRadius)
                 {
                     continue;
                 }
@@ -3211,6 +3343,55 @@ namespace TerrainGenerator
             }
         }
 
+        private void ComputeDirtPatches()
+        {
+            var patchList = new List<Vector2>();//PoissonDisk(new Vector4(0.0f, 0.0f, width, height), 4.0f);
+            patchList.Add(new Vector2(60.0f, 70.0f));
+            patchList.Add(new Vector2(50.0f, 50.0f));
+
+            // Calculate distance to nearest patch center for all vertices in a tile.
+            int a = 0;
+            foreach (var tile in tiles)
+            {
+                var mesh = flatTilePrefab.GetComponent<MeshFilter>().sharedMesh;
+                var vertices = mesh.vertices;
+                var vertexPosData = new Vector2[vertices.Length];
+                for (var i = 0; i < vertexPosData.Length; i++)
+                {
+                    var v = vertices[i];
+                    vertexPosData[i] = tile.pos + new Vector2(v.x + 0.5f, v.z + 0.5f);
+                }
+                
+                // Calculate smallest distance and angle for each vertex
+                var vertexPatchData = new List<Vector2>(vertexPosData.Length);
+                var distances = new float[vertexPosData.Length];
+                for (var i = 0; i < vertexPosData.Length; i++)
+                {
+                    vertexPatchData.Add(new Vector2(0.0f, 0.0f));
+                    distances[i] = width * height;
+                }
+
+                
+
+                for (var i = 0; i < vertexPatchData.Count; i++)
+                {
+                    var v = vertexPosData[i];
+                    for (var k = 0; k < patchList.Count; k++)
+                    {
+                        var dist = Vector2.Distance(patchList[k], v);
+                        if (dist < distances[i])
+                        {
+                            distances[i] = dist;
+                            vertexPatchData[i] = new Vector2(patchList[k].x, patchList[k].y);
+                        }
+                    }
+                }
+
+                // Store vertex dirt patch data for each tile
+                tile.vertexDirtPatchData = new List<Vector2>(vertexPatchData);
+            }
+        }
+        
         /// <summary>
         /// Fast Poisson Disk - Robert Bridson
         /// extents holds min and max per dimension (xy - min, zw - max).

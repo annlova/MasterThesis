@@ -16,13 +16,16 @@ Shader "Unlit/GrassShader"
         
         _GroundTexture ("Texture of bottom layer", 2D) = "white" {}
         _GrassTexture ("Texture of grass layers", 2D) = "white" {}
-        _MaskTexture ("Texture of masking area", 2D) = "white" {}
+        _MaskTexture ("Texture of masking area", 2D) = "black" {}
         
         _LightColor ("Color of light", Vector) = (1.0, 1.0, 1.0, 1.0)
+        
+        _X ("X", Range(0.0, 100.0)) = 0.0
+        _Y ("Y", Range(0.0, 100.0)) = 0.0
     }
     SubShader
     {
-        Tags { "Queue"="Transparent" "RenderType"="Transparent" }
+        Tags { "Queue"="Geometry" "RenderType"="Opaque" "LightMode" = "ForwardBase"}
         Blend SrcAlpha OneMinusSrcAlpha
 
         Pass
@@ -34,13 +37,17 @@ Shader "Unlit/GrassShader"
             #include "UnityShaderVariables.cginc"
             #include "UnityCG.cginc"
 
+            #pragma multi_compile_fwdbase
+            #include "AutoLight.cginc"
+            
             float3 getColor(float2 st);
             float3 ambient();
-            float3 diffuse(float3 normal);
+            float3 diffuse(float3 normal, float attenuation);
             float2 worldToGrassPlanePos(float2 worldPlanePos, float windFactor);
             float calcWindFactor(float2 worldPlanePos);
             float genAlpha(float2 st);
             float layerFactor();
+            float layerFactorLinear();
             
             float4 hash42(float2 x);
             float random2 (float2 st);
@@ -53,19 +60,14 @@ Shader "Unlit/GrassShader"
             float snoise(float2 v);
             float snoiseNormalized(float2 v);
 
-            struct VertexAttributes
-            {
-                float4 pos : POSITION;
-                float4 nor : NORMAL;
-                float2 uv : TEXCOORD0;
-            };
-
             struct FragmentAttributes
             {
-                float4 clipPos : POSITION;
+                float4 pos : POSITION;
                 float4 worldPos : TEXCOORD0;
                 float3 worldNor : TEXCOORD1;
                 float2 st : TEXCOORD2;
+                nointerpolation float2 patchData : TEXCOORD3;
+                LIGHTING_COORDS(4,5)
             };
 
             float _ShellDistance;
@@ -86,28 +88,35 @@ Shader "Unlit/GrassShader"
 
             float4 _LightColor;
 
-            FragmentAttributes vert (VertexAttributes input)
+            float _X;
+            float _Y;
+            
+            FragmentAttributes vert (appdata_full v)
             {
                 // The output struct for the fragment stage.
                 FragmentAttributes output;
-
+                output.patchData = v.texcoord2;
+                
                 // Create the layers
-                float4 modelPos = input.pos + input.nor * _ShellDistance * _Layer;
+                float4 modelPos = v.vertex + float4(v.normal, 0.0f) * _ShellDistance * _Layer;
                 modelPos.w = 1;
                 
-                output.worldPos = mul(unity_ObjectToWorld, modelPos);
-                output.clipPos = UnityObjectToClipPos(modelPos);
+                output.worldPos = mul(modelPos, unity_ObjectToWorld);
+                output.pos = UnityObjectToClipPos(modelPos);
 
-                output.worldNor = normalize(UnityObjectToWorldNormal(input.nor.xyz));
+                output.worldNor = normalize(UnityObjectToWorldNormal(v.normal.xyz));
 
-                output.st = input.uv;
+                output.st = v.texcoord;
+
+                TRANSFER_VERTEX_TO_FRAGMENT(output);
                 
                 return output;
             }
 
             float4 frag (FragmentAttributes input) : SV_Target
             {
-                float3 mask = tex2D(_MaskTexture, input.st);
+                float dist = distance(input.patchData, input.worldPos.xz);
+                float mask = step(10.0f, dist);//tex2D(_MaskTexture, input.st).r;
 
                 /// For clamping color //
                 float4 zeroVec = float4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -117,11 +126,16 @@ Shader "Unlit/GrassShader"
                 float2 worldPlanePos = input.worldPos.xz; // For seamless wind over entire map
                 float windFactor = calcWindFactor(worldPlanePos);
                 float2 grassPlanePos = worldToGrassPlanePos(worldPlanePos, windFactor);
+
+                float isGround = step(_Layer, 0.0f); // Check if ground layer
                 
                 float alpha = genAlpha(grassPlanePos);
-                alpha *= mask;
+                // alpha *= min(1.0f, mask + isGround);
 
-                float3 color = (ambient() + diffuse(input.worldNor)) * getColor(worldPlanePos * 0.1f);
+                float attenuation = LIGHT_ATTENUATION(input);
+                float inLight = step(1.0f, attenuation);
+                float l = layerFactor();
+                float3 color = (ambient() * inLight + (ambient() - (0.3f - l * 0.3f)) * (1.0f - inLight) + diffuse(input.worldNor, attenuation) * l) * getColor(worldPlanePos * 0.1f);
 
                 // To make sure color is between 0 and 1
                 color = clamp(color, zeroVec, oneVec);
@@ -158,12 +172,12 @@ Shader "Unlit/GrassShader"
 
             float3 ambient()
             {
-                return float3(0.5f, 0.5f, 0.5f);
+                return (0.80f).xxx;
             }
 
-            float3 diffuse(float3 normal)
+            float3 diffuse(float3 normal, float attenuation)
             {
-                return _LightColor.rgb * dot(_WorldSpaceLightPos0, normal) * layerFactor();
+                return _LightColor.rgb * dot(_WorldSpaceLightPos0, normal) * attenuation;
             }
 
             float genAlpha(float2 st)
@@ -176,6 +190,11 @@ Shader "Unlit/GrassShader"
             {
                 float t = (float(_Layer) / _MaxLayer);
                 return pow(t, 3);
+            }
+            float layerFactorLinear()
+            {
+                float t = (float(_Layer) / _MaxLayer);
+                return t;
             }
 
             /// Hashing functions to remove artifacts //
@@ -314,5 +333,29 @@ Shader "Unlit/GrassShader"
             
             ENDHLSL
         }
+        
+        Pass
+        {
+            Tags{ "LightMode" = "ShadowCaster" }
+            CGPROGRAM
+            #pragma vertex VSMain
+            #pragma fragment PSMain
+
+            #include "UnityCG.cginc"
+            
+            float4 VSMain (float4 vertex:POSITION) : SV_POSITION
+            {
+                return UnityObjectToClipPos(vertex);
+            }
+ 
+            float4 PSMain (float4 vertex:SV_POSITION) : SV_TARGET
+            {
+                if (unity_LightShadowBias.z != 0.0) discard;
+                return 0;
+            }
+
+            ENDCG
+        }
     }
+//        Fallback "VertexLit"
 }

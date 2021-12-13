@@ -75,15 +75,15 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _GrassDensity: 0.5
+    - _GrassDensity: -0.5
     - _GrassMultiplier: 100
     - _Layer: 0
-    - _MaxLayer: 0
+    - _MaxLayer: 15
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _ShellDistance: 0
+    - _ShellDistance: 0.01
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
@@ -91,6 +91,8 @@ Material:
     - _WindForce: 0
     - _WindFrequency: 0
     - _WindSize: 0
+    - _X: 25.6
+    - _Y: 37.4
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}

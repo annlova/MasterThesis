@@ -86,8 +86,8 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 0.44870907, g: 0.9528302, b: 0.24719654, a: 1}
-    - _Diffuse: {r: 0.15686274, g: 0.5568628, b: 0.33582795, a: 1}
+    - _Diffuse: {r: 0, g: 0.7735849, b: 0.29738072, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _FresnelColor: {r: 0, g: 0.4509804, b: 0.19145644, a: 1}
-    - _Specular: {r: 0.07843135, g: 0.7921569, b: 0.12759215, a: 1}
+    - _FresnelColor: {r: 0, g: 0.5754717, b: 0.3080666, a: 1}
+    - _Specular: {r: 0.06608224, g: 0.4245283, b: 0.18339184, a: 1}
   m_BuildTextureStacks: []

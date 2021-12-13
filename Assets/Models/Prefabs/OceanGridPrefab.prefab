@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 5282866020469205633}
   - component: {fileID: -5754084199372789682}
   - component: {fileID: -7511558181221131132}
-  m_Layer: 0
+  m_Layer: 4
   m_Name: OceanGridPrefab
   m_TagString: Ocean
   m_Icon: {fileID: 0}

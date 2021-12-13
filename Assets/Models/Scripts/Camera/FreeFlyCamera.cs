@@ -84,6 +84,9 @@ public class FreeFlyCamera : MonoBehaviour
 
     #endregion UI
 
+    [SerializeField]
+    private Material postProcessMaterial;
+
     private CursorLockMode _wantedMode;
 
     private float _currentIncrease = 1;
@@ -103,12 +106,19 @@ public class FreeFlyCamera : MonoBehaviour
     private void Start()
     {
         camera = GetComponentInParent<UnityEngine.Camera>();
+        
         riverRenderer = GameObject.Find("TerrainGenerator").transform.Find("RiversRender").GetComponent<Renderer>();
         oceanRenderer = GameObject.Find("TerrainGenerator").transform.Find("OceanRender").GetComponent<Renderer>();
         waterfallRenderer = GameObject.Find("TerrainGenerator").transform.Find("WaterfallRender").GetComponent<Renderer>();
         _initPosition = transform.position;
         _initRotation = transform.eulerAngles;
     }
+
+    // private void OnRenderImage(RenderTexture src, RenderTexture dest)
+    // {
+    //     Graphics.SetRenderTarget(src.colorBuffer, src.depthBuffer);
+    //     Graphics.Blit(src, dest, postProcessMaterial);
+    // }
 
     private void OnEnable()
     {
