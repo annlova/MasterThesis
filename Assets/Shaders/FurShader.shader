@@ -40,7 +40,7 @@ Shader "Unlit/FurShader"
             #pragma multi_compile_fwdbase
             #include "AutoLight.cginc"
             
-            float3 getColor(float2 st, float3 bottom, float3 fur, float3 outmostFur);
+            float3 getColor(float3 bottom, float3 fur, float3 outmostFur);
             float3 ambient();
             float3 diffuse(float3 normal, float3 lightDir, float3 mask);
             float2 textureToFurCoords(float2 worldPlanePos, float windFactor);
@@ -111,17 +111,20 @@ Shader "Unlit/FurShader"
 
             float4 frag (FragmentAttributes input) : SV_Target
             {
-                float2 eyeSt = float2(input.st.s - 65.0f, input.st.t - 74.0f); // Offset for eye texture
+                float2 eyeSt = float2(input.st.x - 65.0f / 256.0f, input.st.y - 74.0f / 256.0f); // Offset for eye texture
+                eyeSt.x /= 16.0f / 256.0f;
+                eyeSt.x /= 2;
+                eyeSt.y /= 32.0f / 256.0f;
                 
-                int isEyeX1 = step(65.0f / 256.0f, input.st.s);
-                int isEyeX2 = step(input.st.s, 81.0f / 256.0f);
-                int isEyeX = min(isEyeX1 + isEyeX2, 1.0f);
+                int isEyeX1 = step(65.0f / 256.0f, input.st.x);
+                int isEyeX2 = step(input.st.x, 81.0f / 256.0f);
+                int isEyeX = isEyeX1 * isEyeX2;
                 
-                int isEyeY1 = step(74.0f / 256.0f, input.st.t);
-                int isEyeY2 = step(input.st.t, 106.0f / 256.0f);
-                int isEyeY = min(isEyeY1 + isEyeY2, 1.0f);
+                int isEyeY1 = step(74.0f / 256.0f, input.st.y);
+                int isEyeY2 = step(input.st.y, 106.0f / 256.0f);
+                int isEyeY = isEyeY1 * isEyeY2;
                 
-                int isEye = min(isEyeX + isEyeY, 1.0f);
+                int isEye = isEyeX * isEyeY;
 
                 
                 /// Sample from textures //
@@ -144,13 +147,13 @@ Shader "Unlit/FurShader"
                 ///
                 
                 float windFactor = calcWindFactor(1 - isEye) * input.st + isEye * eyeSt;
-                float2 furPlanePos = textureToFurCoords((1 - isEye) * input.st + isEye * eyeSt, windFactor);
+                float2 furPlanePos = textureToFurCoords(input.st, windFactor);
                 
                 float alpha = genAlpha(furPlanePos, mask);
 
                 float3 color = (ambient() + diffuse(input.worldNor,
                     normalize(_WorldSpaceCameraPos - input.worldPos),
-                    mask) * attenuation) * getColor((1 - isEye) * input.st + isEye * eyeSt, bottom, fur, outmostFur);
+                    mask) * attenuation) * getColor(bottom, fur, outmostFur);
                 
                 // To make sure color is between 0 and 1
                 color = clamp(color, zeroVec, oneVec);
@@ -158,7 +161,7 @@ Shader "Unlit/FurShader"
                 return float4(color, alpha);
             }
             
-            float3 getColor(float2 st, float3 bottom, float3 fur, float3 outmostFur)
+            float3 getColor(float3 bottom, float3 fur, float3 outmostFur)
             {
                 float isBottom = step(_Layer, 0);
                 float isFur = step(_Layer, _MaxLayer - 1) * step(1, _Layer);

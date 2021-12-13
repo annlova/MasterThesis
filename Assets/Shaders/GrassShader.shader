@@ -155,6 +155,8 @@ Shader "Unlit/GrassShader"
                 float2 worldPlanePos = input.worldPos.xz; // For seamless wind over entire map
                 float windFactor = calcWindFactor(worldPlanePos);
                 float2 grassPlanePos = worldToGrassPlanePos(worldPlanePos, windFactor);
+
+                float isGround = step(_Layer, 0.0f);
                 
                 float strawLength = snoiseNormalized(worldPlanePos * _LengthVariationSize) * 2.0f + 0.25f;
                 float alpha = genAlpha(grassPlanePos, strawLength);
