@@ -30,6 +30,10 @@ public class ShellGenerator : MonoBehaviour
     private float prevGrassDensity;
     
     [SerializeField]
+    private float lengthVariationSize;
+    private float prevlengthVariationSize;
+    
+    [SerializeField]
     private Vector2 windDirection;
     private Vector2 prevWindDirection;
     
@@ -85,6 +89,8 @@ public class ShellGenerator : MonoBehaviour
             
             mat.SetFloat("_GrassMultiplier", grassMultiplier);
             mat.SetFloat("_GrassDensity", grassDensity);
+            
+            mat.SetFloat("_LengthVariationSize", lengthVariationSize);
             
             mat.SetVector("_WindDirection", windDirection);
             mat.SetFloat("_WindForce", windForce);
@@ -147,6 +153,11 @@ public class ShellGenerator : MonoBehaviour
             {
                 renderer.sharedMaterial.SetFloat("_GrassDensity", grassDensity);
             }
+            
+            if (prevlengthVariationSize != lengthVariationSize)
+            {
+                renderer.sharedMaterial.SetFloat("_LengthVariationSize", lengthVariationSize);
+            }
 
             if (prevSunColor != sun.color)
             {
@@ -181,6 +192,7 @@ public class ShellGenerator : MonoBehaviour
         prevNumberOfLayers = numberOfLayers;
         prevGrassMultiplier = grassMultiplier;
         prevGrassDensity = grassDensity;
+        prevlengthVariationSize = lengthVariationSize;
         prevSunColor = sun.color;
         prevWindDirection = windDirection; 
         prevWindForce = windForce; 

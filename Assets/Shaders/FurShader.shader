@@ -18,6 +18,8 @@ Shader "Unlit/FurShader"
         _FurTexture ("Texture of all fur layers, except for outmost", 2D) = "white" {}
         _OutmostLayerTexture ("Texture of outmost fur layer", 2D) = "white" {}
         _MaskTexture ("Texture of masking area", 2D) = "white" {}
+        _EyeTexture ("Eye texture", 2D) = "white" {}
+        _EyeMaskTexture ("Eye texture of masking area", 2D) = "white" {}
         
         _LightColor ("Color of light", Vector) = (1.0, 1.0, 1.0, 1.0)
     }
@@ -81,6 +83,8 @@ Shader "Unlit/FurShader"
             sampler2D _FurTexture;
             sampler2D _OutmostLayerTexture;
             sampler2D _MaskTexture;
+            sampler2D _EyeTexture;
+            sampler2D _EyeMaskTexture;
 
             float4 _LightColor;
             
@@ -107,11 +111,26 @@ Shader "Unlit/FurShader"
 
             float4 frag (FragmentAttributes input) : SV_Target
             {
+                float2 eyeSt = float2(input.st.s - 65.0f, input.st.t - 74.0f); // Offset for eye texture
+                
+                int isEyeX1 = step(65.0f / 256.0f, input.st.s);
+                int isEyeX2 = step(input.st.s, 81.0f / 256.0f);
+                int isEyeX = min(isEyeX1 + isEyeX2, 1.0f);
+                
+                int isEyeY1 = step(74.0f / 256.0f, input.st.t);
+                int isEyeY2 = step(input.st.t, 106.0f / 256.0f);
+                int isEyeY = min(isEyeY1 + isEyeY2, 1.0f);
+                
+                int isEye = min(isEyeX + isEyeY, 1.0f);
+
+                
                 /// Sample from textures //
                 float3 bottom = tex2D(_BottomTexture, input.st);
                 float3 fur = tex2D(_FurTexture, input.st);
-                float3 outmostFur = tex2D(_OutmostLayerTexture, input.st);
-                float3 mask = tex2D(_MaskTexture, input.st);
+                float3 outmostFur = (1 - isEye) * tex2D(_OutmostLayerTexture, input.st) +
+                    isEye * tex2D(_EyeTexture, eyeSt);
+                float3 mask = (1 - isEye) * tex2D(_MaskTexture, input.st) +
+                    isEye * tex2D(_EyeMaskTexture, eyeSt);
                 ///
 
                 /// Calculate if in shadow //
@@ -124,14 +143,14 @@ Shader "Unlit/FurShader"
                 float4 oneVec = float4(1.0f, 1.0f, 1.0f, 1.0f);
                 ///
                 
-                float windFactor = calcWindFactor(input.st);
-                float2 furPlanePos = textureToFurCoords(input.st, windFactor);
+                float windFactor = calcWindFactor(1 - isEye) * input.st + isEye * eyeSt;
+                float2 furPlanePos = textureToFurCoords((1 - isEye) * input.st + isEye * eyeSt, windFactor);
                 
                 float alpha = genAlpha(furPlanePos, mask);
 
                 float3 color = (ambient() + diffuse(input.worldNor,
                     normalize(_WorldSpaceCameraPos - input.worldPos),
-                    mask) * attenuation) * getColor(input.st, bottom, fur, outmostFur);
+                    mask) * attenuation) * getColor((1 - isEye) * input.st + isEye * eyeSt, bottom, fur, outmostFur);
                 
                 // To make sure color is between 0 and 1
                 color = clamp(color, zeroVec, oneVec);

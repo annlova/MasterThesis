@@ -5,6 +5,7 @@ Shader "Unlit/GrassShader"
         _ShellDistance ("Distance between shell layers", Float) = 0.0
         _Layer ("Layer number", Int) = 0
         _MaxLayer ("Highest Layer number", Int) = 0 // (i.e. if 10 layers, max number is 9) 
+        _LengthVariationSize ("Noise scalar for length variation", Float) = 0.0
         
         _GrassMultiplier ("Scale underlying noise for grass gen", Float) = 100.0
         _GrassDensity ("Density of grass", Float) = 0.5
@@ -49,7 +50,7 @@ Shader "Unlit/GrassShader"
             float3 diffuse(float3 normal, float attenuation);
             float2 worldToGrassPlanePos(float2 worldPlanePos, float windFactor);
             float calcWindFactor(float2 worldPlanePos);
-            float genAlpha(float2 st);
+            float genAlpha(float2 st, float strawLength);
             float layerFactor();
             float layerFactorLinear();
             
@@ -81,6 +82,7 @@ Shader "Unlit/GrassShader"
 
             float _GrassMultiplier;
             float _GrassDensity;
+            float _LengthVariationSize;
 
             float2 _WindDirection;
             float _WindForce;
@@ -153,10 +155,9 @@ Shader "Unlit/GrassShader"
                 float2 worldPlanePos = input.worldPos.xz; // For seamless wind over entire map
                 float windFactor = calcWindFactor(worldPlanePos);
                 float2 grassPlanePos = worldToGrassPlanePos(worldPlanePos, windFactor);
-
-                float isGround = step(_Layer, 0.0f); // Check if ground layer
                 
-                float alpha = genAlpha(grassPlanePos);
+                float strawLength = snoiseNormalized(worldPlanePos * _LengthVariationSize) * 2.0f + 0.25f;
+                float alpha = genAlpha(grassPlanePos, strawLength);
                 alpha *= min(1.0f, mask + isGround);
 
                 float attenuation = LIGHT_ATTENUATION(input);
@@ -171,7 +172,7 @@ Shader "Unlit/GrassShader"
 
                 color = color * mask + patchColor * (1.0f - mask);
                 
-                return float4(color, alpha);//color, alpha);
+                return float4(color, alpha);
             }
 
             /// Get color from bottom texture and fur texture and output. Outputs color from bottom texture if
@@ -211,20 +212,21 @@ Shader "Unlit/GrassShader"
                 return _LightColor.rgb * dot(_WorldSpaceLightPos0, normal) * attenuation;
             }
 
-            float genAlpha(float2 st)
+            float genAlpha(float2 st, float strawLength)
             {
                 float isGround = step(_Layer, 0.0f);
-                return min(noise(st) + isGround, 1.0f);
+                float isTransparent = step(strawLength, layerFactorLinear());
+                return min((1 - isTransparent) * noise(st) + isGround, 1.0f);
             }
 
             float layerFactor()
             {
-                float t = (float(_Layer) / _MaxLayer);
+                float t = float(_Layer) / _MaxLayer;
                 return pow(t, 3);
             }
             float layerFactorLinear()
             {
-                float t = (float(_Layer) / _MaxLayer);
+                float t = float(_Layer) / _MaxLayer;
                 return t;
             }
 
