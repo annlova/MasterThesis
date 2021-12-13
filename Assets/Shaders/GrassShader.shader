@@ -18,6 +18,10 @@ Shader "Unlit/GrassShader"
         _GrassTexture ("Texture of grass layers", 2D) = "white" {}
         _MaskTexture ("Texture of masking area", 2D) = "black" {}
         
+        _DirtTexture ("Texture of dirt patch", 2D) = "white" {}
+        _DirtNormals ("Normal texture of dirt patch", 2D) = "white" {}
+        _DirtMask ("Mask", 2D) = "white" {}
+        
         _LightColor ("Color of light", Vector) = (1.0, 1.0, 1.0, 1.0)
         
         _X ("X", Range(0.0, 100.0)) = 0.0
@@ -67,6 +71,7 @@ Shader "Unlit/GrassShader"
                 float3 worldNor : TEXCOORD1;
                 float2 st : TEXCOORD2;
                 nointerpolation float2 patchData : TEXCOORD3;
+                float3x3 tbn : MATRIX;
                 LIGHTING_COORDS(4,5)
             };
 
@@ -85,6 +90,10 @@ Shader "Unlit/GrassShader"
             sampler2D _GroundTexture;
             sampler2D _GrassTexture;
             sampler2D _MaskTexture;
+            
+            sampler2D _DirtTexture;
+            sampler2D _DirtNormal;
+            sampler2D _DirtMask;
 
             float4 _LightColor;
 
@@ -108,6 +117,15 @@ Shader "Unlit/GrassShader"
 
                 output.st = v.texcoord;
 
+                float3 tangent = v.tangent.xyz * v.tangent.w;
+                float3 bitangent = cross(v.normal, v.tangent.xyz) * v.tangent.w;
+                float3 normal = v.normal;
+
+                float3 T = normalize(float3(UnityObjectToWorldDir(tangent)));
+                float3 B = normalize(float3(UnityObjectToWorldDir(bitangent)));
+                float3 N = normalize(float3(UnityObjectToWorldDir(normal)));
+                output.tbn = transpose(float3x3(T, B, N));
+
                 TRANSFER_VERTEX_TO_FRAGMENT(output);
                 
                 return output;
@@ -115,9 +133,18 @@ Shader "Unlit/GrassShader"
 
             float4 frag (FragmentAttributes input) : SV_Target
             {
-                float dist = distance(input.patchData, input.worldPos.xz);
-                float mask = step(10.0f, dist);//tex2D(_MaskTexture, input.st).r;
+                const float PI = 3.1415927f;
+                float dist = distance(input.patchData, input.worldPos.xz) / 3.0f;
+                float2 toPatch = input.patchData - input.worldPos.xz;
+                float angle = (atan2(toPatch.y, toPatch.x) + PI) / (2 * PI);
 
+                float3 patchNormal = tex2D(_DirtNormal, float2(angle, dist));
+                patchNormal = normalize(mul(patchNormal, input.tbn));
+                float3 patchColor = tex2D(_DirtTexture, float2(angle, dist));
+                float patchMask = tex2D(_DirtMask, float2(angle, dist));
+                
+                float mask = min(step(1.0f, dist) + patchMask, 1.0f);//tex2D(_MaskTexture, input.st).r;
+                
                 /// For clamping color //
                 float4 zeroVec = float4(0.0f, 0.0f, 0.0f, 0.0f);
                 float4 oneVec = float4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -130,17 +157,21 @@ Shader "Unlit/GrassShader"
                 float isGround = step(_Layer, 0.0f); // Check if ground layer
                 
                 float alpha = genAlpha(grassPlanePos);
-                // alpha *= min(1.0f, mask + isGround);
+                alpha *= min(1.0f, mask + isGround);
 
                 float attenuation = LIGHT_ATTENUATION(input);
                 float inLight = step(1.0f, attenuation);
                 float l = layerFactor();
-                float3 color = (ambient() * inLight + (ambient() - (0.3f - l * 0.3f)) * (1.0f - inLight) + diffuse(input.worldNor, attenuation) * l) * getColor(worldPlanePos * 0.1f);
+                float3 amb = ambient();
+                float3 color = (amb * inLight + (amb - (0.3f - l * 0.3f)) * (1.0f - inLight) + diffuse(input.worldNor, attenuation) * l) * getColor(worldPlanePos * 0.1f);
 
+                // patchColor = patchColor * ();
                 // To make sure color is between 0 and 1
                 color = clamp(color, zeroVec, oneVec);
+
+                color = color * mask + patchColor * (1.0f - mask);
                 
-                return float4(color, alpha);
+                return float4(color, alpha);//color, alpha);
             }
 
             /// Get color from bottom texture and fur texture and output. Outputs color from bottom texture if

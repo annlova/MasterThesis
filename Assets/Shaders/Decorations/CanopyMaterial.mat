@@ -39,6 +39,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _DistributionTexDiffuse:
+        m_Texture: {fileID: 2800000, guid: 34d2177d32fb23b46942908de365a41c, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _EmissionMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -82,7 +86,7 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
-    - _WindStrength: 7.2
+    - _WindStrength: 10
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 0.44870907, g: 0.9528302, b: 0.24719654, a: 1}

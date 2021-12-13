@@ -662,12 +662,6 @@ namespace TerrainGenerator
                             var uv2 = new Vector2[mesh.vertices.Length];
                             for (int i = 0; i < uv2.Length; i++)
                             {
-                                var a = tile.vertexDirtPatchData[i];
-                                if (!a.Equals(new Vector2(50.0f, 50.0f)) &&
-                                    !a.Equals(new Vector2(30.0f, 70.0f)))
-                                {
-                                    Debug.Log(tile.pos);
-                                }
                                 uv2[i] = tile.vertexDirtPatchData[i];
                             }
                             mesh.uv2 = uv2;
@@ -3291,7 +3285,7 @@ namespace TerrainGenerator
         private void SpawnDecorations()
         {
             var points = PoissonDisk(new Vector4(0.0f, 0.0f, width, height), decorationSpacing);
-            Debug.Log(points.Count);
+            
             for (int i = 0; i < points.Count; i++)
             {
                 var p2 = points[i];
@@ -3345,12 +3339,10 @@ namespace TerrainGenerator
 
         private void ComputeDirtPatches()
         {
-            var patchList = new List<Vector2>();//PoissonDisk(new Vector4(0.0f, 0.0f, width, height), 4.0f);
-            patchList.Add(new Vector2(60.0f, 70.0f));
-            patchList.Add(new Vector2(50.0f, 50.0f));
+            var patchList = PoissonDisk(new Vector4(0.0f, 0.0f, width, height), 15.0f);
+            
 
             // Calculate distance to nearest patch center for all vertices in a tile.
-            int a = 0;
             foreach (var tile in tiles)
             {
                 var mesh = flatTilePrefab.GetComponent<MeshFilter>().sharedMesh;
@@ -3359,7 +3351,7 @@ namespace TerrainGenerator
                 for (var i = 0; i < vertexPosData.Length; i++)
                 {
                     var v = vertices[i];
-                    vertexPosData[i] = tile.pos + new Vector2(v.x + 0.5f, v.z + 0.5f);
+                    vertexPosData[i] = new Vector2(tile.pos.x + 0.5f, height - tile.pos.y + 0.5f);// + new Vector2(v.x + 0.5f, v.z + 0.5f);
                 }
                 
                 // Calculate smallest distance and angle for each vertex
@@ -3368,17 +3360,15 @@ namespace TerrainGenerator
                 for (var i = 0; i < vertexPosData.Length; i++)
                 {
                     vertexPatchData.Add(new Vector2(0.0f, 0.0f));
-                    distances[i] = width * height;
+                    distances[i] = width * width * height * height;
                 }
-
-                
 
                 for (var i = 0; i < vertexPatchData.Count; i++)
                 {
                     var v = vertexPosData[i];
                     for (var k = 0; k < patchList.Count; k++)
                     {
-                        var dist = Vector2.Distance(patchList[k], v);
+                        var dist = Vector2.Distance(v, patchList[k]);
                         if (dist < distances[i])
                         {
                             distances[i] = dist;

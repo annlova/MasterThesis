@@ -90,20 +90,20 @@ Shader "Unlit/GenericSandShader"
 
             fixed4 frag (FragmentAttributes input) : SV_Target
             {
+                float wet = 1.0f - smoothstep(input.tideHeight.x - 0.03f, input.tideHeight.x, input.worldPos.y);//smoothstep(-0.5f, input.tideHeight.x, input.worldPos.y);
+                
                 // sample the texture
                 float2 st = input.st * 3.0f;
                 float3 color = tex2D(_MainTex, st).rgb;
                 float3 normal = tex2D(_NormMap, st).rgb;
+                // normal = lerp(normal, float3(0.0f, 0.0f, 1.0f), wet);
                 normal = normalize(mul(input.tbn, normal));
-                // normal = input.nor;
                 float2 gradientSample = float2(calcGradientAmount(normal), 0.0f);
                 float3 gradient = tex2D(_GradientMap, gradientSample).rgb;
                 float3 roughness = tex2D(_RoughnessMapWet, st * 2.0f).rgb;
                 float3 roughness2 = tex2D(_RoughnessMapDry, st * 2.0f).rgb;
 
                 float attenuation = LIGHT_ATTENUATION(input);
-
-                float wet = 1.0f - smoothstep(input.tideHeight.x - 0.03f, input.tideHeight.x, input.worldPos.y);//smoothstep(-0.5f, input.tideHeight.x, input.worldPos.y);
                 
                 float3 cameraDir = normalize(_WorldSpaceCameraPos - input.worldPos.xyz);
 
