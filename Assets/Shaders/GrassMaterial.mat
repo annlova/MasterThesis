@@ -40,7 +40,11 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DirtNormal:
-        m_Texture: {fileID: 2800000, guid: 63e4f9f143e4eca4c8f66ad665092bcd, type: 3}
+        m_Texture: {fileID: 2800000, guid: 01cd17a2f8af3c843a15dfbd63fe2621, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DirtNormalDetail:
+        m_Texture: {fileID: 2800000, guid: 52190126ba0594b4fac313c30a276bee, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DirtNormals:
@@ -101,6 +105,8 @@ Material:
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _PatchRadius: 1
+    - _PatchRadiusMax: 2
+    - _PatchRadiusMin: 2
     - _ShellDistance: 0.01
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
