@@ -139,14 +139,14 @@ Shader "Unlit/GrassShader"
                 const float PI = 3.1415927f;
                 float dist = distance(input.patchData, input.worldPos.xz) / _PatchRadius;
                 float2 toPatch = input.patchData - input.worldPos.xz;
-                // float angle = (atan2(toPatch.y, toPatch.x) + PI) / (2 * PI);
+                float angle = (atan2(toPatch.y, toPatch.x) + PI) / (2 * PI);
 
                 float2 patchUv = toPatch / _PatchRadius / 2.0f + 0.5f;
                 
                 float3 patchNormal = tex2D(_DirtNormal, patchUv/2.0f);
                 patchNormal = normalize(mul(input.tbn, patchNormal));
-                float3 patchColor = tex2D(_DirtTexture, patchUv);
-                float patchMask = tex2D(_DirtMask, patchUv/*float2(angle, dist)*/);
+                float3 patchColor = tex2D(_DirtTexture, float2(angle, dist));
+                float patchMask = tex2D(_DirtMask, float2(angle, dist));
                 // patchMask = 0.0f;
                 float mask = min(step(1.0f, dist) + patchMask, 1.0f);//tex2D(_MaskTexture, input.st).r;
                 
