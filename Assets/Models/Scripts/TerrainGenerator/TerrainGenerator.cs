@@ -40,7 +40,7 @@ namespace TerrainGenerator
         private Vector2Int numAcres;
 
         [SerializeField] 
-        private int acreSize;
+        public int acreSize;
         
         [SerializeField] 
         private int elevationRangeMin;
@@ -134,7 +134,7 @@ namespace TerrainGenerator
         private GameObject oceanGridPrefab;
         
         [SerializeField]
-        private int gridSizeFactor;
+        public int gridSizeFactor;
         
         [SerializeField] 
         private GameObject waterfallPrefab;
@@ -209,6 +209,13 @@ namespace TerrainGenerator
         private MeshFilter waterfallMeshFilter;
         private Renderer waterfallRenderer;
 
+        public Dictionary<Collider, float[]> beaches;
+        
+        public Dictionary<Collider, float[]> GetBeaches()
+        {
+            return beaches;
+        }
+        
         // Start is called before the first frame update
         void Start()
         {
@@ -843,7 +850,7 @@ namespace TerrainGenerator
                     var t = tiles[(int) worldPos.x, height - 2 - (int) worldPos.z];
                     if (!t.isBeach)
                     {
-                        beachHeight[index] = 0.4f;
+                        // beachHeight[index] = 0.4f;
                     }
                 }
                 
@@ -876,6 +883,10 @@ namespace TerrainGenerator
 
             mesh.vertices = vertices;
             mesh.normals = normals;
+
+            // Add beach heights to beaches
+            var collider = beach.GetComponentInChildren<BoxCollider>();
+            beaches[collider] = beachHeight;
 
             return beachHeight;
         }
@@ -1384,6 +1395,8 @@ namespace TerrainGenerator
             waterfallColliderObject = transform.Find("WaterfallCollider").gameObject;
             waterfallMeshFilter = waterfallRenderObject.GetComponent<MeshFilter>();
             waterfallRenderer = waterfallRenderObject.GetComponent<Renderer>();
+
+            beaches = new Dictionary<Collider, float[]>();
             
             tileValues = new Vector4[width * height];
             for (int i = 0; i < tileValues.Length; i++)

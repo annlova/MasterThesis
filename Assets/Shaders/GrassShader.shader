@@ -20,7 +20,7 @@ Shader "Unlit/GrassShader"
         _MaskTexture ("Texture of masking area", 2D) = "black" {}
         
         _DirtTexture ("Texture of dirt patch", 2D) = "white" {}
-        _DirtNormals ("Normal texture of dirt patch", 2D) = "white" {}
+        _DirtNormal ("Normal texture of dirt patch", 2D) = "white" {}
         _DirtMask ("Mask", 2D) = "white" {}
         
         _LightColor ("Color of light", Vector) = (1.0, 1.0, 1.0, 1.0)
@@ -141,7 +141,7 @@ Shader "Unlit/GrassShader"
                 float angle = (atan2(toPatch.y, toPatch.x) + PI) / (2 * PI);
 
                 float3 patchNormal = tex2D(_DirtNormal, float2(angle, dist));
-                patchNormal = normalize(mul(patchNormal, input.tbn));
+                patchNormal = normalize(mul(input.tbn, patchNormal));
                 float3 patchColor = tex2D(_DirtTexture, float2(angle, dist));
                 float patchMask = tex2D(_DirtMask, float2(angle, dist));
                 
@@ -168,6 +168,8 @@ Shader "Unlit/GrassShader"
                 float3 amb = ambient();
                 float3 color = (amb * inLight + (amb - (0.3f - l * 0.3f)) * (1.0f - inLight) + diffuse(input.worldNor, attenuation) * l) * getColor(worldPlanePos * 0.1f);
 
+                patchColor = patchColor * amb + patchColor * diffuse(patchNormal, attenuation);
+                
                 // patchColor = patchColor * ();
                 // To make sure color is between 0 and 1
                 color = clamp(color, zeroVec, oneVec);

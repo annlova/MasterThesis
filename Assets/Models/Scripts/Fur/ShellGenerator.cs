@@ -99,7 +99,7 @@ public class ShellGenerator : MonoBehaviour
 
             mat.SetVector("_LightColor", sun.color);
             
-            mat.renderQueue = 2000 + i;
+            mat.renderQueue = 2050 + i;
         }
     }
 

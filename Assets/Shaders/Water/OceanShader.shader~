@@ -16,7 +16,7 @@ Shader "Unlit/OceanShader"
     SubShader
     {
 //        Tags { "RenderType"="Opaque" }
-        Tags { "Queue"="Transparent" "RenderType"="Transparent" }
+        Tags { "Queue"="Transparent+1" "RenderType"="Transparent" }
         Blend SrcAlpha OneMinusSrcAlpha
 
         LOD 100

@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: GrassMaterial
-  m_Shader: {fileID: 4800000, guid: ebede1dc60b0a7c41bb45bccab986af5, type: 3}
+  m_Name: DecalMaterial
+  m_Shader: {fileID: 4800000, guid: 379fc550fbaeaf14dbc41aecc75563ba, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -35,40 +35,12 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _DirtMask:
-        m_Texture: {fileID: 2800000, guid: 8a7ff0ac07e128342a9d1dd4b34abce6, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _DirtNormal:
-        m_Texture: {fileID: 2800000, guid: df38a5c2bc6f93d4b94a782a3ade386b, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _DirtNormals:
-        m_Texture: {fileID: 2800000, guid: 01cd17a2f8af3c843a15dfbd63fe2621, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _DirtTexture:
-        m_Texture: {fileID: 2800000, guid: afdca5862293f184096c41335010cb27, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
     - _EmissionMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _GrassTexture:
-        m_Texture: {fileID: 2800000, guid: eabd6cc818d5fd84bbdf3ec99e360d6d, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _GroundTexture:
-        m_Texture: {fileID: 2800000, guid: e06e4be68efc34c44aaeb193e6ca6510, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _MaskTexture:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 15812ae892bc0554a9349ba3ee5c95fa, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -85,34 +57,23 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - _BumpScale: 1
+    - _CutOff: 0.06
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _GrassDensity: -0.5
-    - _GrassMultiplier: 100
-    - _Layer: 0
-    - _MaxLayer: 15
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _ShellDistance: 0.01
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
-    - _WindForce: 0
-    - _WindFrequency: 0
-    - _WindSize: 0
-    - _X: 43
-    - _Y: 51
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _LightColor: {r: 1, g: 1, b: 1, a: 1}
-    - _WindDirection: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
