@@ -6040,10 +6040,11 @@ MonoBehaviour:
   numberOfLayers: 16
   grassMultiplier: 100
   grassDensity: -0.5
-  windDirection: {x: 0, y: 0}
-  windForce: 0
+  lengthVariationSize: 17
+  windDirection: {x: 1, y: 1}
+  windForce: 8
   windFrequency: 0
-  windSize: 0
+  windSize: 0.3
 --- !u!4 &849764603
 Transform:
   m_ObjectHideFlags: 0
@@ -7349,7 +7350,7 @@ MonoBehaviour:
   seed: 70
   spawnSlopes: 1
   spawnRivers: 1
-  spawnDecorations: 1
+  spawnDecorations: 0
   spawnWaterfalls: 1
   stepDeltaTime: 0.05
   maxCliffWalkReverts: 100000
@@ -10382,6 +10383,8 @@ MonoBehaviour:
   rockPrefab: {fileID: 2235921654663849865, guid: 7804eaa8ea94e0f45946ff99535053f3, type: 3}
   waterFallMistEmitter: {fileID: 1744689490}
   sparkleEmitter: {fileID: 405231427}
+  dirtPatchSeparation: 15
+  dirtPatchRadius: 3
 --- !u!4 &1595967272
 Transform:
   m_ObjectHideFlags: 0

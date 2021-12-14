@@ -22,6 +22,7 @@ Shader "Unlit/GrassShader"
         _DirtTexture ("Texture of dirt patch", 2D) = "white" {}
         _DirtNormal ("Normal texture of dirt patch", 2D) = "white" {}
         _DirtMask ("Mask", 2D) = "white" {}
+        _PatchRadius ("Dirt patch radius", Float) = 2.0
         
         _LightColor ("Color of light", Vector) = (1.0, 1.0, 1.0, 1.0)
         
@@ -96,11 +97,11 @@ Shader "Unlit/GrassShader"
             sampler2D _DirtTexture;
             sampler2D _DirtNormal;
             sampler2D _DirtMask;
-
+            float _PatchRadius;
+            
             float4 _LightColor;
 
-            float _X;
-            float _Y;
+            
             
             FragmentAttributes vert (appdata_full v)
             {
@@ -136,15 +137,17 @@ Shader "Unlit/GrassShader"
             float4 frag (FragmentAttributes input) : SV_Target
             {
                 const float PI = 3.1415927f;
-                float dist = distance(input.patchData, input.worldPos.xz) / 3.0f;
+                float dist = distance(input.patchData, input.worldPos.xz) / _PatchRadius;
                 float2 toPatch = input.patchData - input.worldPos.xz;
-                float angle = (atan2(toPatch.y, toPatch.x) + PI) / (2 * PI);
+                // float angle = (atan2(toPatch.y, toPatch.x) + PI) / (2 * PI);
 
-                float3 patchNormal = tex2D(_DirtNormal, float2(angle, dist));
-                patchNormal = normalize(mul(input.tbn, patchNormal));
-                float3 patchColor = tex2D(_DirtTexture, float2(angle, dist));
-                float patchMask = tex2D(_DirtMask, float2(angle, dist));
+                float2 patchUv = toPatch / _PatchRadius / 2.0f + 0.5f;
                 
+                float3 patchNormal = tex2D(_DirtNormal, patchUv/2.0f);
+                patchNormal = normalize(mul(input.tbn, patchNormal));
+                float3 patchColor = tex2D(_DirtTexture, patchUv);
+                float patchMask = tex2D(_DirtMask, patchUv/*float2(angle, dist)*/);
+                // patchMask = 0.0f;
                 float mask = min(step(1.0f, dist) + patchMask, 1.0f);//tex2D(_MaskTexture, input.st).r;
                 
                 /// For clamping color //
@@ -165,7 +168,7 @@ Shader "Unlit/GrassShader"
                 float attenuation = LIGHT_ATTENUATION(input);
                 float inLight = step(1.0f, attenuation);
                 float l = layerFactor();
-                float3 amb = ambient();
+                float3 amb = ambient() + windFactor * 0.15f;
                 float3 color = (amb * inLight + (amb - (0.3f - l * 0.3f)) * (1.0f - inLight) + diffuse(input.worldNor, attenuation) * l) * getColor(worldPlanePos * 0.1f);
 
                 patchColor = patchColor * amb + patchColor * diffuse(patchNormal, attenuation);

@@ -36,7 +36,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DirtMask:
-        m_Texture: {fileID: 2800000, guid: 8a7ff0ac07e128342a9d1dd4b34abce6, type: 3}
+        m_Texture: {fileID: 2800000, guid: 532245dfd74c1424e974a684b5e51674, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DirtNormal:
@@ -48,7 +48,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DirtTexture:
-        m_Texture: {fileID: 2800000, guid: afdca5862293f184096c41335010cb27, type: 3}
+        m_Texture: {fileID: 2800000, guid: ef6b404fba17fa048b28d7227698c949, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _EmissionMap:
@@ -60,7 +60,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _GroundTexture:
-        m_Texture: {fileID: 2800000, guid: e06e4be68efc34c44aaeb193e6ca6510, type: 3}
+        m_Texture: {fileID: 2800000, guid: eabd6cc818d5fd84bbdf3ec99e360d6d, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
@@ -94,11 +94,13 @@ Material:
     - _GrassDensity: -0.5
     - _GrassMultiplier: 100
     - _Layer: 0
+    - _LengthVariationSize: 0
     - _MaxLayer: 15
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
+    - _PatchRadius: 1
     - _ShellDistance: 0.01
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1

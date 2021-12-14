@@ -159,6 +159,12 @@ namespace TerrainGenerator
 
         [SerializeField]
         private GameObject sparkleEmitter;
+
+        [SerializeField] 
+        private float dirtPatchSeparation;
+
+        [SerializeField] 
+        private float dirtPatchRadius;
         
         // Private variables outside of terrain generation
 
@@ -1344,6 +1350,8 @@ namespace TerrainGenerator
             flatsColliderObject = transform.Find("FlatsCollider").gameObject;
             flatsMeshFilter = flatsRenderObject.GetComponent<MeshFilter>();
             flatsRenderer = flatsRenderObject.GetComponent<Renderer>();
+            flatsRenderer.material.SetFloat("_PatchRadius", dirtPatchRadius);
+
 
             cliffsRenderObject = transform.Find("CliffsRender").gameObject;
             cliffsColliderObject = transform.Find("CliffsCollider").gameObject;
@@ -3352,7 +3360,7 @@ namespace TerrainGenerator
 
         private void ComputeDirtPatches()
         {
-            var patchList = PoissonDisk(new Vector4(0.0f, 0.0f, width, height), 15.0f);
+            var patchList = PoissonDisk(new Vector4(0.0f, 0.0f, width, height), dirtPatchSeparation);
             
 
             // Calculate distance to nearest patch center for all vertices in a tile.
