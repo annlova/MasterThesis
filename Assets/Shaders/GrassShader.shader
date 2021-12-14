@@ -21,6 +21,7 @@ Shader "Unlit/GrassShader"
         
         _DirtTexture ("Texture of dirt patch", 2D) = "white" {}
         _DirtNormal ("Normal texture of dirt patch", 2D) = "white" {}
+        _DirtNormalDetail ("Normal texture of dirt patch details", 2D) = "white" {}
         _DirtMask ("Mask", 2D) = "white" {}
         _PatchRadius ("Dirt patch radius", Float) = 2.0
         
@@ -96,6 +97,7 @@ Shader "Unlit/GrassShader"
             
             sampler2D _DirtTexture;
             sampler2D _DirtNormal;
+            sampler2D _DirtNormalDetail;
             sampler2D _DirtMask;
             float _PatchRadius;
             
@@ -143,7 +145,9 @@ Shader "Unlit/GrassShader"
 
                 float2 patchUv = toPatch / _PatchRadius / 2.0f + 0.5f;
                 
-                float3 patchNormal = tex2D(_DirtNormal, patchUv/2.0f);
+                float3 patchNormalRough = tex2D(_DirtNormal, patchUv);
+                float3 patchNormalDetail = tex2D(_DirtNormalDetail, patchUv);
+                float3 patchNormal = normalize(patchNormalRough + patchNormalDetail);
                 patchNormal = normalize(mul(input.tbn, patchNormal));
                 float3 patchColor = tex2D(_DirtTexture, patchUv);
                 float patchMask = tex2D(_DirtMask, patchUv/*float2(angle, dist)*/);
