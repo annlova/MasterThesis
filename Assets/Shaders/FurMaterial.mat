@@ -43,6 +43,14 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _EyeMaskTexture:
+        m_Texture: {fileID: 2800000, guid: cfc021552d56a4b47a6af3a42be936b4, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EyeTexture:
+        m_Texture: {fileID: 2800000, guid: 07342bc13348d2241966c021550bc78e, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _FurTexture:
         m_Texture: {fileID: 2800000, guid: 0be432356416f2041bd91e1947ca35a8, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -64,7 +72,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OutmostLayerTexture:
-        m_Texture: {fileID: 2800000, guid: afd7a29e6dfe33848998e3eabbc90ab3, type: 3}
+        m_Texture: {fileID: 2800000, guid: c50bf37764ea9934eb9aee435038bb80, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ParallaxMap:

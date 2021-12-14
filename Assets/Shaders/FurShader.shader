@@ -47,6 +47,7 @@ Shader "Unlit/FurShader"
             float calcWindFactor(float2 worldPlanePos);
             float genAlpha(float2 stTex, float3 mask);
             float layerFactor();
+            float isBlinking(float start, float end);
             
             float random2 (float2 st);
             float random(float2 st);
@@ -57,6 +58,7 @@ Shader "Unlit/FurShader"
             float3 permute(float3 x);
             float snoise(float2 v);
             float snoiseNormalized(float2 v);
+            float nsin(float val);
 
             struct FragmentAttributes
             {
@@ -113,8 +115,13 @@ Shader "Unlit/FurShader"
             {
                 float2 eyeSt = float2(input.st.x - 65.0f / 256.0f, input.st.y - 74.0f / 256.0f); // Offset for eye texture
                 eyeSt.x /= 16.0f / 256.0f;
-                eyeSt.x /= 2;
                 eyeSt.y /= 32.0f / 256.0f;
+                eyeSt.x /= 3;
+                
+                // eyeSt.x += isBlinking(0.25f, 0.28f, 0.62f, 0.65f, 0.68f, 0.71f) * 0.5;
+                eyeSt.x += min(isBlinking(0.25f, 0.26f) + isBlinking(0.62f, 0.63f) + isBlinking(0.68f, 0.69f), 1.0f) * 256.0f / 3.0f; // half-closed eye (down-way)
+                eyeSt.x += min(isBlinking(0.26f, 0.27f) + isBlinking(0.63f, 0.64f) + isBlinking(0.69f, 0.70f), 1.0f) * 256.0f / 1.5f; // closed eye
+                eyeSt.x += min(isBlinking(0.27f, 0.28f) + isBlinking(0.64f, 0.65f) + isBlinking(0.70f, 0.71f), 1.0f) * 256.0f / 3.0f; // half-closed eye (up-way)
                 
                 int isEyeX1 = step(65.0f / 256.0f, input.st.x);
                 int isEyeX2 = step(input.st.x, 81.0f / 256.0f);
@@ -167,7 +174,7 @@ Shader "Unlit/FurShader"
                 float isFur = step(_Layer, _MaxLayer - 1) * step(1, _Layer);
                 float isOutermostLayer = step(_MaxLayer, _Layer);
                 
-                return (bottom * isBottom) + (fur * isFur) + (outmostFur * isOutermostLayer);
+                return bottom * isBottom + fur * isFur + outmostFur * isOutermostLayer;
             }
             
             float2 textureToFurCoords(float2 worldPlanePos, float windFactor)
@@ -204,6 +211,15 @@ Shader "Unlit/FurShader"
             {
                 float t = float(_Layer) / _MaxLayer;
                 return pow(t, 1.2);
+            }
+
+            float isBlinking(float start, float end)
+            {
+                float timer = frac(_Time.y/4.5f);
+                float lowCheck = step(start, timer);
+                float highCheck = step(timer, end);
+                
+                return lowCheck * highCheck;
             }
 
             float random2 (float2 st) {
@@ -322,6 +338,11 @@ Shader "Unlit/FurShader"
             float snoiseNormalized(float2 v)
             {
                 return (snoise(v) + 1.0f) / 2.0f;
+            }
+
+            float nsin(float val)
+            {
+                return (sin(val) + 1)/2;
             }
             
             ENDHLSL
