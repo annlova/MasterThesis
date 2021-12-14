@@ -22,7 +22,8 @@ Shader "Unlit/GrassShader"
         _DirtTexture ("Texture of dirt patch", 2D) = "white" {}
         _DirtNormal ("Normal texture of dirt patch", 2D) = "white" {}
         _DirtMask ("Mask", 2D) = "white" {}
-        _PatchRadius ("Dirt patch radius", Float) = 2.0
+        _PatchRadiusMin ("Dirt patch min radius", Float) = 2.0
+        _PatchRadiusMax ("Dirt patch max radius", Float) = 2.0
         
         _LightColor ("Color of light", Vector) = (1.0, 1.0, 1.0, 1.0)
         
@@ -72,9 +73,12 @@ Shader "Unlit/GrassShader"
                 float4 worldPos : TEXCOORD0;
                 float3 worldNor : TEXCOORD1;
                 float2 st : TEXCOORD2;
-                nointerpolation float2 patchData : TEXCOORD3;
+                nointerpolation float2 patchData1 : TEXCOORD3;
+                nointerpolation float2 patchData2 : TEXCOORD4;
+                nointerpolation float2 rng : RANDOM;
+                // nointerpolation float2 patchData3 : TEXCOORD5;
                 float3x3 tbn : MATRIX;
-                LIGHTING_COORDS(4,5)
+                LIGHTING_COORDS(6,7)
             };
 
             float _ShellDistance;
@@ -97,7 +101,9 @@ Shader "Unlit/GrassShader"
             sampler2D _DirtTexture;
             sampler2D _DirtNormal;
             sampler2D _DirtMask;
-            float _PatchRadius;
+            
+            float _PatchRadiusMin;
+            float _PatchRadiusMax;
             
             float4 _LightColor;
 
@@ -107,7 +113,9 @@ Shader "Unlit/GrassShader"
             {
                 // The output struct for the fragment stage.
                 FragmentAttributes output;
-                output.patchData = v.texcoord2;
+                output.patchData1 = v.texcoord1;
+                output.patchData2 = v.texcoord2;
+                output.rng = v.texcoord3;
                 
                 // Create the layers
                 float4 modelPos = v.vertex + float4(v.normal, 0.0f) * _ShellDistance * _Layer;
@@ -137,15 +145,22 @@ Shader "Unlit/GrassShader"
             float4 frag (FragmentAttributes input) : SV_Target
             {
                 const float PI = 3.1415927f;
-                float dist = distance(input.patchData, input.worldPos.xz) / _PatchRadius;
-                float2 toPatch = input.patchData - input.worldPos.xz;
+                float dist1 = distance(input.patchData1, input.worldPos.xz);
+                float dist2 = distance(input.patchData2, input.worldPos.xz);
+                float dist1Closer = step(dist1, dist2);
+                float rng = input.rng.x * dist1Closer + input.rng.y * (1.0f - dist1Closer);
+                float patchRadius = lerp(_PatchRadiusMin, _PatchRadiusMax, rng);
+                 
+                float dist = min(dist1, dist2) / patchRadius;
+                float2 patchPos = input.patchData1 * dist1Closer + input.patchData2 * (1.0f - dist1Closer);
+                float2 toPatch = patchPos - input.worldPos.xz;
                 float angle = (atan2(toPatch.y, toPatch.x) + PI) / (2 * PI);
-
-                float2 patchUv = toPatch / _PatchRadius / 2.0f + 0.5f;
+                
+                float2 patchUv = toPatch / patchRadius / 2.0f + 0.5f;
                 
                 float3 patchNormal = tex2D(_DirtNormal, patchUv/2.0f);
                 patchNormal = normalize(mul(input.tbn, patchNormal));
-                float3 patchColor = tex2D(_DirtTexture, float2(angle, dist));
+                float3 patchColor = tex2D(_DirtTexture, input.worldPos.xz / 5.0f);
                 float patchMask = tex2D(_DirtMask, float2(angle, dist));
                 // patchMask = 0.0f;
                 float mask = min(step(1.0f, dist) + patchMask, 1.0f);//tex2D(_MaskTexture, input.st).r;

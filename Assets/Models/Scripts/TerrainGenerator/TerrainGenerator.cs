@@ -164,7 +164,10 @@ namespace TerrainGenerator
         private float dirtPatchSeparation;
 
         [SerializeField] 
-        private float dirtPatchRadius;
+        private float dirtPatchRadiusMin;
+        
+        [SerializeField] 
+        private float dirtPatchRadiusMax;
         
         // Private variables outside of terrain generation
 
@@ -420,7 +423,8 @@ namespace TerrainGenerator
                             p = new Vector3(x + 0.5f, /*-0.3f*/-elevationHeight, height - 1 - z + 0.5f);
                             Instantiate(tile.cliffTile.prefab/*prefabBeach*/, p, tile.cliffTile.prefab/*prefabBeach*/.transform.rotation, transform);
                             var pRoof = new Vector3(x + 0.5f, tile.elevation * elevationHeight - riverOffset, height - 1 - z + 0.5f);
-                            Instantiate(tile.cliffTile.prefabRoof, pRoof, tile.cliffTile.prefabRoof.transform.rotation, transform);
+                            var o = Instantiate(tile.cliffTile.prefabRoof, pRoof, tile.cliffTile.prefabRoof.transform.rotation, transform);
+                            ComputeTileVertexPatchData(tile, o);
                         }
                         else
                         {
@@ -432,7 +436,8 @@ namespace TerrainGenerator
                             
                             var pRoof = new Vector3(x + 0.5f, tile.elevation * elevationHeight - riverOffset, height - 1 - z + 0.5f);
                             var roofObj = Instantiate(tile.cliffTile.prefabRoof, pRoof, tile.cliffTile.prefabRoof.transform.rotation, transform);
-                            setRiverDistAttribute(tile, roofObj);
+                            // setRiverDistAttribute(tile, roofObj);
+                            ComputeTileVertexPatchData(tile, roofObj);
 
                             var renderFloor = !tile.isBeach;
                             if (tile.isMergeCliff)
@@ -455,7 +460,8 @@ namespace TerrainGenerator
                                     else
                                     {
                                         var pSubRoof = new Vector3(x + 0.5f, item.Item1 * elevationHeight - riverOffset, height - 1 - z + 0.5f);
-                                        Instantiate(item.Item2.prefabRoof, pSubRoof, item.Item2.prefabRoof.transform.rotation, transform);
+                                        var o = Instantiate(item.Item2.prefabRoof, pSubRoof, item.Item2.prefabRoof.transform.rotation, transform);
+                                        ComputeTileVertexPatchData(tile, o);
                                     }
                                 }
                             }
@@ -465,25 +471,19 @@ namespace TerrainGenerator
                                 var pFloor = new Vector3(x + 0.5f, tile.floor * elevationHeight - riverOffset,
                                     height - 1 - z + 0.5f);
                                 var floorObj = Instantiate(flatTilePrefab, pFloor, Quaternion.identity, transform);
-                                setRiverDistAttribute(tile, floorObj);
+                                ComputeTileVertexPatchData(tile, floorObj);
+                                // setRiverDistAttribute(tile, floorObj);
 
 
                                 // TODO
                                 if (tile.isRiverEdge)
                                 {
-                                    var mesh = floorObj.GetComponent<MeshFilter>().mesh;
-                                    var uv2 = new Vector2[mesh.vertices.Length];
-                                    for (int i = 0; i < uv2.Length; i++)
-                                    {
-                                        uv2[i] = tile.vertexDirtPatchData[i];
-                                    }
-                                    mesh.uv2 = uv2;
-                                    
                                     var riverEdgePrefab = cliffTiles[9].prefab;
                                     var rot = Quaternion.FromToRotation(Vector3.back,
                                         new Vector3(tile.riverEdgeDir.x, 0.0f, -tile.riverEdgeDir.y));
-                                    Instantiate(riverEdgePrefab, p, rot * riverEdgePrefab.transform.rotation,
+                                    var o = Instantiate(riverEdgePrefab, p, rot * riverEdgePrefab.transform.rotation,
                                         transform);
+                                    ComputeTileVertexPatchData(tile, o);
                                 }
                                 else if (tile.isRiver)
                                 {
@@ -520,21 +520,24 @@ namespace TerrainGenerator
                             if (tile.slopeFactor > 0)
                             {
                                 Instantiate(slopeCliffPrefab, p, Quaternion.Euler(0.0f, rotation, 0.0f), transform);
-                                Instantiate(slopeCliffRoofPrefab, p + Vector3.up * elevationHeight, Quaternion.Euler(0.0f, rotation, 0.0f), transform);
+                                var o = Instantiate(slopeCliffRoofPrefab, p + Vector3.up * elevationHeight, Quaternion.Euler(0.0f, rotation, 0.0f), transform);
+                                ComputeTileVertexPatchData(tile, o);
                             }
                             else
                             {
                                 if (tile.isSlopeEdge1)
                                 {
                                     Instantiate(slopeCliffEndSWPrefab, p, slopeCliffEndSWPrefab.transform.rotation, transform);
-                                    Instantiate(slopeCliffEndHighRoofSWPrefab, p + Vector3.up * elevationHeight,
+                                    var o = Instantiate(slopeCliffEndHighRoofSWPrefab, p + Vector3.up * elevationHeight,
                                         Quaternion.identity, transform);
+                                    ComputeTileVertexPatchData(tile, o);
                                 }
                                 else
                                 {
                                     Instantiate(slopeCliffEndSEPrefab, p, slopeCliffEndSEPrefab.transform.rotation, transform);
-                                    Instantiate(slopeCliffEndHighRoofSEPrefab, p + Vector3.up * elevationHeight,
+                                    var o = Instantiate(slopeCliffEndHighRoofSEPrefab, p + Vector3.up * elevationHeight,
                                         Quaternion.identity, transform);
+                                    ComputeTileVertexPatchData(tile, o);
                                 }
                             }
                         }
@@ -581,7 +584,8 @@ namespace TerrainGenerator
                                 var rotation = ct.prefab.transform.rotation;
                                 Instantiate(ct.prefab, p, rotation, transform);
                                 // Instantiate(tile.cliffTile.prefab, p + Vector3.up * elevationHeight, tile.cliffTile.prefab.transform.rotation, transform);
-                                Instantiate(ct.prefabRoof, p + Vector3.up * elevationHeight, rotation, transform);
+                                var o = Instantiate(ct.prefabRoof, p + Vector3.up * elevationHeight, rotation, transform);
+                                ComputeTileVertexPatchData(tile, o);
                             }
                         }
                         
@@ -615,7 +619,8 @@ namespace TerrainGenerator
                                 }
                             }
                             var o = Instantiate(prefab, p, Quaternion.Euler(angleDeg, 0.0f, 0.0f), transform);
-                            setRiverDistAttribute(tile, o);
+                            ComputeTileVertexPatchData(tile, o);
+                            // setRiverDistAttribute(tile, o);
                             var oScale = o.transform.localScale;
                             oScale.z *= scaleFactor;
                             o.transform.localScale = oScale;
@@ -623,21 +628,12 @@ namespace TerrainGenerator
                             // Set all normals straight up
                             var mesh = o.GetComponent<MeshFilter>().mesh;
                             var normals = mesh.normals;
-                            var uv2 = new Vector2[normals.Length];
                             for (int i = 0; i < normals.Length; i++)
                             {
                                 normals[i] = Quaternion.Euler(-angleDeg, 0.0f, 0.0f) * Vector3.up;
-                                if (prefab == flatTilePrefab)
-                                {
-                                    uv2[i] = tile.vertexDirtPatchData[i];
-                                }
                             }
                             
                             mesh.normals = normals;
-                            if (prefab == flatTilePrefab)
-                            {
-                                mesh.uv2 = uv2;
-                            }
 
                             if ((tile.isSlopeEdge1 || tile.isSlopeEdge2) && tile.isSlopeLower)
                             {
@@ -671,13 +667,7 @@ namespace TerrainGenerator
                             var p = new Vector3(x + 0.5f, tile.elevation * elevationHeight - riverOffset, height - 1 - z + 0.5f);
 
                             var floorObj = Instantiate(flatTilePrefab, p, Quaternion.identity, transform);
-                            var mesh = floorObj.GetComponent<MeshFilter>().mesh;
-                            var uv2 = new Vector2[mesh.vertices.Length];
-                            for (int i = 0; i < uv2.Length; i++)
-                            {
-                                uv2[i] = tile.vertexDirtPatchData[i];
-                            }
-                            mesh.uv2 = uv2;
+                            ComputeTileVertexPatchData(tile, floorObj);
                             // setRiverDistAttribute(tile, floorObj);
                             // TODO
                             if (tile.isRiverEdge)
@@ -1340,6 +1330,9 @@ namespace TerrainGenerator
         private int currentIsland;
 
         private List<Tile> cliffStartTiles;
+
+        private List<Vector2> patchList;
+        private List<float> patchRandomList;
         
         private void Init()
         {
@@ -1350,7 +1343,8 @@ namespace TerrainGenerator
             flatsColliderObject = transform.Find("FlatsCollider").gameObject;
             flatsMeshFilter = flatsRenderObject.GetComponent<MeshFilter>();
             flatsRenderer = flatsRenderObject.GetComponent<Renderer>();
-            flatsRenderer.material.SetFloat("_PatchRadius", dirtPatchRadius);
+            flatsRenderer.material.SetFloat("_PatchRadiusMin", dirtPatchRadiusMin);
+            flatsRenderer.material.SetFloat("_PatchRadiusMax", dirtPatchRadiusMax);
 
 
             cliffsRenderObject = transform.Find("CliffsRender").gameObject;
@@ -3358,49 +3352,151 @@ namespace TerrainGenerator
             }
         }
 
+        private void ComputeTileVertexPatchData(Tile tile, GameObject prefab)
+        {
+            var mesh = prefab.GetComponent<MeshFilter>().mesh;
+            var vertices = mesh.vertices;
+            var uv2 = new Vector2[vertices.Length];
+            var uv3 = new Vector2[vertices.Length];
+            var uv4 = new Vector2[vertices.Length];
+
+            var pos = new Vector2(tile.pos.x + 0.5f, height - tile.pos.y + 0.5f);
+            float distance = width * width * height * height;
+            float distance2 = width * width * height * height;
+            var closest = new int[2];
+            for (var k = 0; k < patchList.Count; k++)
+            {
+                var dist = Vector2.Distance(pos, patchList[k]);
+                if (dist < distance)
+                {
+                    distance2 = distance;
+                    closest[1] = closest[0];
+                    
+                    distance = dist;
+                    closest[0] = k;
+                }
+                else if (dist < distance2)
+                {
+                    distance2 = dist;
+                    closest[1] = k; 
+                }
+            }
+
+            var rng = Random.Range(0.0f, 1.0f);
+            for (var i = 0; i < uv2.Length; i++)
+            {
+                uv2[i] = patchList[closest[0]];
+                uv3[i] = patchList[closest[1]];
+                uv4[i] = new Vector2(patchRandomList[closest[0]], patchRandomList[closest[1]]);
+            }
+
+            mesh.uv2 = uv2;
+            mesh.uv3 = uv3;
+            mesh.uv4 = uv4;
+
+            // var vertexPosData = new Vector2[vertices.Length];
+            // for (var i = 0; i < vertexPosData.Length; i++)
+            // {
+            //     vertexPosData[i] = new Vector2(tile.pos.x + 0.5f, height - tile.pos.y + 0.5f);// + new Vector2(v.x + 0.5f, v.z + 0.5f);
+            //     vertexPosData[i] += new Vector2(vertices[i].x, vertices[i].z);
+            // }
+            //     
+            // // Calculate smallest distance and angle for each vertex
+            // var vertexPatchData1 = new List<Vector2>(vertexPosData.Length);
+            // var vertexPatchData2 = new List<Vector2>(vertexPosData.Length);
+            // // var vertexPatchData3 = new List<Vector2>(vertexPosData.Length);
+            // var distances = new float[vertexPosData.Length];
+            // for (var i = 0; i < vertexPosData.Length; i++)
+            // {
+            //     vertexPatchData1.Add(new Vector2(50.0f, 50.0f));
+            //     vertexPatchData2.Add(new Vector2(50.0f, 50.0f));
+            //     // vertexPatchData3.Add(new Vector2(50.0f, 50.0f));
+            //     distances[i] = width * width * height * height;
+            // }
+            //
+            // for (var i = 0; i < vertexPatchData1.Count; i++)
+            // {
+            //     var v = vertexPosData[i];
+            //     for (var k = 0; k < patchList.Count; k++)
+            //     {
+            //         var dist = Vector2.Distance(v, patchList[k]);
+            //         if (dist < distances[i])
+            //         {
+            //             distances[i] = dist;
+            //             // vertexPatchData3[i] = vertexPatchData2[i];
+            //             vertexPatchData2[i] = vertexPatchData1[i];
+            //             vertexPatchData1[i] = new Vector2(patchList[k].x, patchList[k].y);
+            //         }
+            //     }
+            //     
+            //     uv2[i] = vertexPatchData1[i];
+            //     uv3[i] = vertexPatchData2[i];
+            //     // uv4[i] = vertexPatchData3[i];
+            // }
+
+            // mesh.uv2 = uv2;
+            // mesh.uv3 = uv3;
+            // mesh.uv4 = uv4;
+        }
         private void ComputeDirtPatches()
         {
-            var patchList = PoissonDisk(new Vector4(0.0f, 0.0f, width, height), dirtPatchSeparation);
-            
+            patchList = PoissonDisk(new Vector4(0.0f, 0.0f, width, height), dirtPatchSeparation);
+            patchRandomList = new List<float>(patchList.Count);
+            for (int i = 0; i < patchList.Count; i++)
+            {
+                patchRandomList.Add(Random.Range(0.0f, 1.0f));
+                var rng = Random.Range(0.0f, 1.0f);
+                if (rng < 0.3f)
+                {
+                    var p = patchList[i];
+                    var rngX = Random.Range(0.0f, 1.0f);
+                    var rngY = Random.Range(0.0f, 1.0f);
+                    var p2 = p + new Vector2(rngX, rngY).normalized * dirtPatchRadiusMin /*TODO*/* 1.0f;
+                    patchList.Add(p2);
+                }
+                else
+                {
+                }
+            }
 
             // Calculate distance to nearest patch center for all vertices in a tile.
-            foreach (var tile in tiles)
-            {
-                var mesh = flatTilePrefab.GetComponent<MeshFilter>().sharedMesh;
-                var vertices = mesh.vertices;
-                var vertexPosData = new Vector2[vertices.Length];
-                for (var i = 0; i < vertexPosData.Length; i++)
-                {
-                    var v = vertices[i];
-                    vertexPosData[i] = new Vector2(tile.pos.x + 0.5f, height - tile.pos.y + 0.5f);// + new Vector2(v.x + 0.5f, v.z + 0.5f);
-                }
-                
-                // Calculate smallest distance and angle for each vertex
-                var vertexPatchData = new List<Vector2>(vertexPosData.Length);
-                var distances = new float[vertexPosData.Length];
-                for (var i = 0; i < vertexPosData.Length; i++)
-                {
-                    vertexPatchData.Add(new Vector2(0.0f, 0.0f));
-                    distances[i] = width * width * height * height;
-                }
-
-                for (var i = 0; i < vertexPatchData.Count; i++)
-                {
-                    var v = vertexPosData[i];
-                    for (var k = 0; k < patchList.Count; k++)
-                    {
-                        var dist = Vector2.Distance(v, patchList[k]);
-                        if (dist < distances[i])
-                        {
-                            distances[i] = dist;
-                            vertexPatchData[i] = new Vector2(patchList[k].x, patchList[k].y);
-                        }
-                    }
-                }
-
-                // Store vertex dirt patch data for each tile
-                tile.vertexDirtPatchData = new List<Vector2>(vertexPatchData);
-            }
+            // foreach (var tile in tiles)
+            // {
+            //     var mesh = flatTilePrefab.GetComponent<MeshFilter>().sharedMesh;
+            //     var vertices = mesh.vertices;
+            //     var vertexPosData = new Vector2[vertices.Length];
+            //     for (var i = 0; i < vertexPosData.Length; i++)
+            //     {
+            //         var v = vertices[i];
+            //         vertexPosData[i] = new Vector2(tile.pos.x + 0.5f, height - tile.pos.y + 0.5f);// + new Vector2(v.x + 0.5f, v.z + 0.5f);
+            //     }
+            //     
+            //     // Calculate smallest distance and angle for each vertex
+            //     var vertexPatchData = new List<Vector2>(vertexPosData.Length);
+            //     var distances = new float[vertexPosData.Length];
+            //     for (var i = 0; i < vertexPosData.Length; i++)
+            //     {
+            //         vertexPatchData.Add(new Vector2(0.0f, 0.0f));
+            //         distances[i] = width * width * height * height;
+            //     }
+            //
+            //     for (var i = 0; i < vertexPatchData.Count; i++)
+            //     {
+            //         var v = vertexPosData[i];
+            //         for (var k = 0; k < patchList.Count; k++)
+            //         {
+            //             var dist = Vector2.Distance(v, patchList[k]);
+            //             if (dist < distances[i])
+            //             {
+            //                 distances[i] = dist;
+            //                 vertexPatchData[i] = new Vector2(patchList[k].x, patchList[k].y);
+            //             }
+            //         }
+            //     }
+            //
+            //     // Store vertex dirt patch data for each tile
+            //     tile.vertexDirtPatchData = new List<Vector2>(vertexPatchData);
+            // }
         }
         
         /// <summary>
