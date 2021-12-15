@@ -15,7 +15,9 @@ Shader "Unlit/CanopyShader"
         _ColorRandomizer ("Color Randomizer", 2D) = "white" {}
         _Blend ("Blend", Range(0.0, 1.0)) = 1.0
         _CutOff ("Cut Off", Range(0.0, 1.0)) = 0.5
-        _DistributionTexDiffuse ("Color Distribution", 2D) = "white" {}
+        _DistributionTexDiffuse ("Color distribution diffuse", 2D) = "white" {}
+        _DistributionTexSpecular ("Color distribution specular", 2D) = "white" {}
+        _DistributionTexFresnel ("Color distribution fresnel", 2D) = "white" {}
     }
     SubShader
     {
@@ -70,6 +72,8 @@ Shader "Unlit/CanopyShader"
             float _CutOff;
             sampler2D _DistributionTexDiffuse;
             float4 _DistributionTexDiffuse_ST;
+            sampler2D _DistributionTexSpecular;
+            sampler2D _DistributionTexFresnel;
 
             void Unity_Remap_float2(float2 In, float2 InMinMax, float2 OutMinMax, out float2 Out)
             {
@@ -250,12 +254,14 @@ Shader "Unlit/CanopyShader"
                 float3 reflectDir = reflect(-_WorldSpaceLightPos0.xyz, i.worldNor);
                 float spec = pow(max(dot(viewDir, reflectDir), 0.0f), 32) * specularStrength;
                 // Randomize specular color
+                // float3 specularColor = tex2D(_DistributionTexSpecular, i.rng);
                 float3 specularColor = _Specular * lerp(0.5f, 1.0f, i.rng.x);
 
                 // Fresnel term
                 float fresnel;
                 Unity_FresnelEffect_float(i.worldNor, viewDir, _FresnelPower, fresnel);
                 // Randomize fresnel color
+                // float3 fresnelColor = tex2D(_DistributionTexFresnel, i.rng);
                 float3 fresnelColor = _FresnelColor * lerp(0.5f, 1.0f, i.rng.x);
 
                 // Color randomizer
