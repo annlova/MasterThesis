@@ -26,10 +26,13 @@ Shader "Unlit/GrassShader"
         _PatchRadiusMin ("Dirt patch min radius", Float) = 2.0
         _PatchRadiusMax ("Dirt patch max radius", Float) = 2.0
         
-        _LightColor ("Color of light", Vector) = (1.0, 1.0, 1.0, 1.0)
+        _DirtRoughness ("Specular roughness for dirt", 2D) = "white" {}
+        _DirtStoneMask ("Dirt stone mask", 2D) = "white" {}
         
         _X ("X", Range(0.0, 100.0)) = 0.0
         _Y ("Y", Range(0.0, 100.0)) = 0.0
+        
+        _LightColor ("Color of light", Vector) = (1.0, 1.0, 1.0, 1.0)
     }
     SubShader
     {
@@ -103,6 +106,9 @@ Shader "Unlit/GrassShader"
             sampler2D _DirtNormal;
             sampler2D _DirtNormalDetail;
             sampler2D _DirtMask;
+
+            sampler2D _DirtRoughness;
+            sampler2D _DirtStoneMask;
             
             float _PatchRadiusMin;
             float _PatchRadiusMax;
@@ -146,11 +152,32 @@ Shader "Unlit/GrassShader"
 
             void Unity_FresnelEffect_float(float3 Normal, float3 ViewDir, float Power, out float Out)
             {
-                Out = pow((1.0 - saturate(dot(normalize(Normal), normalize(ViewDir)))), Power);
+                Out = pow(1.0 - saturate(dot(normalize(Normal), normalize(ViewDir))), Power);
             }
             
             float4 frag (FragmentAttributes input) : SV_Target
             {
+                float2 st = input.st;
+                float2 stWorld = input.worldPos.xz;
+
+                float attenuation = LIGHT_ATTENUATION(input);
+                
+                float3 dirtStoneMask = tex2D(_DirtStoneMask, stWorld / 5.0f); 
+                float isStone = dirtStoneMask.r;
+                
+                float3 dirtRoughness = tex2D(_DirtRoughness, stWorld / 5).rgb;
+                
+                float3 cameraDir = normalize(_WorldSpaceCameraPos - input.worldPos.xyz);
+
+                float roughness = 0.0f + isStone * dirtRoughness; // check if dirt or stone
+                float specularStrength = roughness * 1.55;
+                float3 lightDir = normalize(float3(0, 1, 1.25));
+                float3 reflectDir = reflect(-lightDir, float3(0.0f, 1.0f, 0.0f));
+                float spec = pow(max(dot(cameraDir, reflectDir), 0.0f), 32) * attenuation;
+                float3 specular = specularStrength * spec * (1.0f).xxx;
+
+                //////////
+                
                 const float PI = 3.1415927f;
                 float dist1 = distance(input.patchData1, input.worldPos.xz);
                 float dist2 = distance(input.patchData2, input.worldPos.xz);
@@ -167,9 +194,12 @@ Shader "Unlit/GrassShader"
                 
                 float3 patchNormalRough = tex2D(_DirtNormal, patchUv);
                 float3 patchNormalDetail = tex2D(_DirtNormalDetail, patchUv);
-                float3 patchNormal = patchNormalDetail;//normalize(patchNormalRough + patchNormalDetail);
+                
+                float3 patchNormal = patchNormalDetail;
+                // float3 patchNormal = normalize(patchNormalRough + patchNormalDetail);
+                
                 patchNormal = normalize(mul(input.tbn, patchNormal));
-                float3 patchColor = tex2D(_DirtTexture, input.worldPos.xz / 5.0f);
+                float3 patchColor = tex2D(_DirtTexture, input.worldPos.xz / 5.0f); // Dirtpatch
                 float patchMask = tex2D(_DirtMask, float2(angle, dist));
                 // patchMask = 0.0f;
                 float mask = min(step(1.0f, dist) + patchMask, 1.0f);//tex2D(_MaskTexture, input.st).r;
@@ -188,14 +218,13 @@ Shader "Unlit/GrassShader"
                 float strawLength = snoiseNormalized(worldPlanePos * _LengthVariationSize) * 2.0f + 0.25f;
                 float alpha = genAlpha(grassPlanePos, strawLength);
                 alpha *= min(1.0f, mask + isGround);
-
-                float attenuation = LIGHT_ATTENUATION(input);
+                
                 float inLight = step(1.0f, attenuation);
                 float l = layerFactor();
                 float3 amb = ambient() + windFactor * 0.15f;
                 float3 color = (amb * inLight + (amb - (0.3f - l * 0.3f)) * (1.0f - inLight) + diffuse(input.worldNor, attenuation) * l) * getColor(worldPlanePos * 0.1f);
 
-                patchColor = patchColor * (0.8f).rrr + patchColor * diffuse(float3(0.0f, 1.0f,0.0f), attenuation);
+                patchColor = patchColor * (0.8f).rrr + patchColor * diffuse(patchNormal, attenuation) + specular;
 
                 // float fresnel;
                 // Unity_FresnelEffect_float(float3(0.0f, 1.0f, 0.0f), float3(cos(dist * PI), sin(dist * PI), 0.0f), 2.0f, fresnel);
