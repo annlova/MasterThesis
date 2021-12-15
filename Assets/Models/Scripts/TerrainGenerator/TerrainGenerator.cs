@@ -1490,7 +1490,7 @@ namespace TerrainGenerator
 
             if (tries == numAcres.x)
             {
-                throw new NotSupportedException();
+                throw new NotSupportedException("No place to spawn rivers");
             }
             
             // Do acre river walk
@@ -3347,7 +3347,8 @@ namespace TerrainGenerator
                 }
                 else
                 {
-                    Instantiate(rockPrefab, p, rockPrefab.transform.rotation, transform); // TODO
+                    var rotation = Random.Range(0.0f, 359.0f);
+                    Instantiate(rockPrefab, p, rockPrefab.transform.rotation * Quaternion.Euler(0.0f, rotation, 0.0f), transform); // TODO
                 }
             }
         }
@@ -3442,21 +3443,38 @@ namespace TerrainGenerator
         {
             patchList = PoissonDisk(new Vector4(0.0f, 0.0f, width, height), dirtPatchSeparation);
             patchRandomList = new List<float>(patchList.Count);
-            for (int i = 0; i < patchList.Count; i++)
+            var patchExtraRandomList = new List<float>();
+            
+            var patchListCount = patchList.Count;
+            for (int i = 0; i < patchListCount; i++)
             {
-                patchRandomList.Add(Random.Range(0.0f, 1.0f));
+                var rRng = Random.Range(0.0f, 1.0f);
+                patchRandomList.Add(rRng);
                 var rng = Random.Range(0.0f, 1.0f);
-                if (rng < 0.3f)
+                var p = patchList[i];
+                if (rng > 0.85f)
                 {
-                    var p = patchList[i];
                     var rngX = Random.Range(0.0f, 1.0f);
                     var rngY = Random.Range(0.0f, 1.0f);
-                    var p2 = p + new Vector2(rngX, rngY).normalized * dirtPatchRadiusMin /*TODO*/* 1.0f;
-                    patchList.Add(p2);
+                    var r = dirtPatchRadiusMin * (1.0f - rRng) + dirtPatchRadiusMax * rRng;// < rRng2 ? rRng2 : rRng; 
+                    p += new Vector2(rngX, rngY).normalized * r * 1.15f;
+                    patchList.Add(p);
+                    patchExtraRandomList.Add(rRng);
                 }
-                else
+                if (rng > 0.4f)
                 {
+                    var rngX = Random.Range(0.0f, 1.0f);
+                    var rngY = Random.Range(0.0f, 1.0f);
+                    var r = dirtPatchRadiusMin * (1.0f - rRng) + dirtPatchRadiusMax * rRng;// < rRng2 ? rRng2 : rRng; 
+                    p += new Vector2(rngX, rngY).normalized * r * 1.15f;
+                    patchList.Add(p);
+                    patchExtraRandomList.Add(rRng);
                 }
+            }
+
+            for (var i = 0; i < patchExtraRandomList.Count; i++)
+            {
+                patchRandomList.Add(patchExtraRandomList[i]);
             }
 
             // Calculate distance to nearest patch center for all vertices in a tile.

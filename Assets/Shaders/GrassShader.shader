@@ -144,6 +144,11 @@ Shader "Unlit/GrassShader"
                 return output;
             }
 
+            void Unity_FresnelEffect_float(float3 Normal, float3 ViewDir, float Power, out float Out)
+            {
+                Out = pow((1.0 - saturate(dot(normalize(Normal), normalize(ViewDir)))), Power);
+            }
+            
             float4 frag (FragmentAttributes input) : SV_Target
             {
                 const float PI = 3.1415927f;
@@ -162,7 +167,7 @@ Shader "Unlit/GrassShader"
                 
                 float3 patchNormalRough = tex2D(_DirtNormal, patchUv);
                 float3 patchNormalDetail = tex2D(_DirtNormalDetail, patchUv);
-                float3 patchNormal = normalize(patchNormalRough + patchNormalDetail);
+                float3 patchNormal = patchNormalDetail;//normalize(patchNormalRough + patchNormalDetail);
                 patchNormal = normalize(mul(input.tbn, patchNormal));
                 float3 patchColor = tex2D(_DirtTexture, input.worldPos.xz / 5.0f);
                 float patchMask = tex2D(_DirtMask, float2(angle, dist));
@@ -190,7 +195,11 @@ Shader "Unlit/GrassShader"
                 float3 amb = ambient() + windFactor * 0.15f;
                 float3 color = (amb * inLight + (amb - (0.3f - l * 0.3f)) * (1.0f - inLight) + diffuse(input.worldNor, attenuation) * l) * getColor(worldPlanePos * 0.1f);
 
-                patchColor = patchColor * amb + patchColor * diffuse(patchNormal, attenuation);
+                patchColor = patchColor * (0.8f).rrr + patchColor * diffuse(float3(0.0f, 1.0f,0.0f), attenuation);
+
+                // float fresnel;
+                // Unity_FresnelEffect_float(float3(0.0f, 1.0f, 0.0f), float3(cos(dist * PI), sin(dist * PI), 0.0f), 2.0f, fresnel);
+                // patchColor -= (0.1f).xxx * (1.0f - fresnel);
                 
                 // patchColor = patchColor * ();
                 // To make sure color is between 0 and 1

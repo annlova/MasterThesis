@@ -109,11 +109,11 @@ namespace Player
             Vector3 offset;
             if (left)
             {
-                offset = Quaternion.Euler(0.0f, transform.rotation.y, 0.0f) * Vector3.left;
+                offset = -transform.right;
             }
             else
             {
-                offset = Quaternion.Euler(0.0f, transform.rotation.y, 0.0f) * Vector3.right;
+                offset = transform.right;
             }
             offset *= 0.24f;
             var p = transform.position + offset + normal * 0.05f;// + Vector3.up;
