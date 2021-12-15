@@ -10383,9 +10383,10 @@ MonoBehaviour:
   rockPrefab: {fileID: 2235921654663849865, guid: 7804eaa8ea94e0f45946ff99535053f3, type: 3}
   waterFallMistEmitter: {fileID: 1744689490}
   sparkleEmitter: {fileID: 405231427}
-  dirtPatchSeparation: 15
+  dirtPatchSeparation: 8
   dirtPatchRadiusMin: 1
   dirtPatchRadiusMax: 4
+  connectedPatchDistanceRadiusMultiplier: 1.1
 --- !u!4 &1595967272
 Transform:
   m_ObjectHideFlags: 0

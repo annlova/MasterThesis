@@ -168,6 +168,9 @@ namespace TerrainGenerator
         
         [SerializeField] 
         private float dirtPatchRadiusMax;
+
+        [SerializeField] 
+        private float connectedPatchDistanceRadiusMultiplier;
         
         // Private variables outside of terrain generation
 
@@ -398,7 +401,8 @@ namespace TerrainGenerator
                     var riverOffset = tile.isRiver ? bottomRiverOffset : 0.0f;
                     if (tile.isWaterfall || tile.isRiverTransition)
                     {
-                        
+                        // var p = new Vector3(x + 0.5f, tile.elevation, height - 1 - z + 0.5f);
+                        // Instantiate(treeTrunkPrefab, p, Quaternion.identity, transform);
                     }
                     else if (tile.isCliff)
                     {
@@ -718,10 +722,10 @@ namespace TerrainGenerator
                         tileValues[x + z * width].x = 1.0f;
                     }
 
-                    var islandFactor = (float) tile.acre.islandIndex / (numIslands - 1) * 0.8f;
-                    tileValues[x + z * width].x = 0.2f + islandFactor;
-                    tileValues[x + z * width].y = 0.2f + islandFactor;
-                    tileValues[x + z * width].z = 0.2f + islandFactor;
+                    // var islandFactor = (float) tile.acre.islandIndex / (numIslands - 1) * 0.8f;
+                    // tileValues[x + z * width].x = 0.2f + islandFactor;
+                    // tileValues[x + z * width].y = 0.2f + islandFactor;
+                    // tileValues[x + z * width].z = 0.2f + islandFactor;
 
                 }
             }
@@ -2349,6 +2353,20 @@ namespace TerrainGenerator
             {
                 for (int elevation = acre.elevation; elevation >= 0; elevation--)
                 {
+                    if (acre.waterfallTiles[elevation].Count == 0)
+                    {
+                        continue;
+                    }
+
+                    var tiles = acre.waterfallTiles[elevation];
+                    for (int i = 1; i < tiles.Count - 1; i++)
+                    {
+                        tiles[i].isCliff = false;
+                    }
+                }
+
+                for (int elevation = acre.elevation; elevation >= 0; elevation--)
+                {
                     // No river, no waterfall
                     if (acre.waterfallTiles[elevation].Count == 0)
                     {
@@ -2356,7 +2374,20 @@ namespace TerrainGenerator
                     }
                     
                     var tiles = acre.waterfallTiles[elevation];
-
+                    
+                    // List<Tile> tilesDown = null;
+                    // Tile firstDown = null;
+                    // Tile lastDown = null;
+                    // if (elevation > 0)
+                    // {
+                    //     if (acre.waterfallTiles[elevation - 1].Count > 0)
+                    //     {
+                    //         tilesDown = acre.waterfallTiles[elevation - 1];
+                    //         var firstDown = tilesDown[0];
+                    //         var lastDown = tilesDown[tiles.Count - 1];
+                    //     }
+                    // }
+                    
                     var first = tiles[0];
                     var last = tiles[tiles.Count - 1];
                     var firstLastDiff = last.pos - first.pos;
@@ -2378,6 +2409,15 @@ namespace TerrainGenerator
                             posLastTop = new Vector2Int(first.pos.x - 1, last.pos.y);
                             posFirstBot = new Vector2Int(last.pos.x + 1, first.pos.y + 1);
                             posLastBot = new Vector2Int(last.pos.x + 1, last.pos.y);
+                                                        
+                            var nextFirst = this.tiles[last.pos.x + 1, first.pos.y];
+                            var nextLast = this.tiles[last.pos.x + 1, last.pos.y]; 
+                            if (nextFirst.isWaterfall && nextFirst.isCliff ||
+                                nextLast.isWaterfall && nextLast.isCliff)
+                            {
+                                posFirstBot = new Vector2Int(last.pos.x, first.pos.y + 1);
+                                posLastBot = new Vector2Int(last.pos.x, last.pos.y);
+                            }
                         }
                         else
                         {
@@ -2385,6 +2425,15 @@ namespace TerrainGenerator
                             posLastTop = new Vector2Int(last.pos.x - 1, last.pos.y);
                             posFirstBot = new Vector2Int(first.pos.x + 1, first.pos.y + 1);
                             posLastBot = new Vector2Int(first.pos.x + 1, last.pos.y);
+                                                        
+                            var nextFirst = this.tiles[first.pos.x + 1, first.pos.y];
+                            var nextLast = this.tiles[first.pos.x + 1, last.pos.y]; 
+                            if (nextFirst.isWaterfall && nextFirst.isCliff ||
+                            nextLast.isWaterfall && nextLast.isCliff)
+                            {
+                                posFirstBot = new Vector2Int(first.pos.x, first.pos.y + 1);
+                                posLastBot = new Vector2Int(first.pos.x, last.pos.y);
+                            }
                         }
                     }
                     else if (acre.waterfallDir.x < 0)
@@ -2397,6 +2446,15 @@ namespace TerrainGenerator
                             posLastTop = new Vector2Int(first.pos.x + 2, last.pos.y + 1);
                             posFirstBot = new Vector2Int(last.pos.x, first.pos.y);
                             posLastBot = new Vector2Int(last.pos.x, last.pos.y + 1);
+                                                        
+                            var nextFirst = this.tiles[last.pos.x - 1, first.pos.y];
+                            var nextLast = this.tiles[last.pos.x - 1, last.pos.y]; 
+                            if (nextFirst.isWaterfall && nextLast.isCliff ||
+                            nextLast.isWaterfall && nextLast.isCliff)
+                            {
+                                posFirstBot = new Vector2Int(last.pos.x + 1, first.pos.y);
+                                posLastBot = new Vector2Int(last.pos.x + 1, last.pos.y + 1);
+                            }
                         }
                         else
                         {
@@ -2404,6 +2462,15 @@ namespace TerrainGenerator
                             posLastTop = new Vector2Int(last.pos.x + 2, last.pos.y + 1);
                             posFirstBot = new Vector2Int(first.pos.x, first.pos.y);
                             posLastBot = new Vector2Int(first.pos.x, last.pos.y + 1);
+                            
+                            var nextFirst = this.tiles[first.pos.x - 1, first.pos.y];
+                            var nextLast = this.tiles[first.pos.x - 1, last.pos.y]; 
+                            if (nextFirst.isWaterfall && nextFirst.isCliff ||
+                            nextLast.isWaterfall && nextLast.isCliff)
+                            {
+                                posFirstBot = new Vector2Int(first.pos.x + 1, first.pos.y);
+                                posLastBot = new Vector2Int(first.pos.x + 1, last.pos.y + 1);
+                            }
                         }
                     }
                     else
@@ -2414,15 +2481,43 @@ namespace TerrainGenerator
                         {
                             posFirstTop = new Vector2Int(first.pos.x, first.pos.y - 1);
                             posLastTop = new Vector2Int(last.pos.x + 1, first.pos.y - 1);
-                            posFirstBot = new Vector2Int(first.pos.x, last.pos.y + 1);
-                            posLastBot = new Vector2Int(last.pos.x + 1, last.pos.y + 1);
+                            posFirstBot = new Vector2Int(first.pos.x, last.pos.y + 2);
+                            posLastBot = new Vector2Int(last.pos.x + 1, last.pos.y + 2);
+
+                            if (first.pos.y < height - 1 &&
+                                last.pos.y < height - 1)
+                            {
+                                var nextFirst = this.tiles[first.pos.x, first.pos.y + 1];
+                                var nextLast = this.tiles[last.pos.x, last.pos.y + 1];
+                                if ((nextFirst.isWaterfall && nextFirst.isCliff) ||
+                                    (nextLast.isWaterfall && nextLast.isCliff) ||
+                                    (first.isMergeCliff || last.isMergeCliff))
+                                {
+                                    posFirstBot = new Vector2Int(first.pos.x, last.pos.y);
+                                    posLastBot = new Vector2Int(last.pos.x + 1, last.pos.y);
+                                }
+                            }
                         }
                         else
                         {
                             posFirstTop = new Vector2Int(first.pos.x, last.pos.y - 1);
                             posLastTop = new Vector2Int(last.pos.x + 1, last.pos.y - 1);
-                            posFirstBot = new Vector2Int(first.pos.x, first.pos.y + 1);
-                            posLastBot = new Vector2Int(last.pos.x + 1, first.pos.y + 1);
+                            posFirstBot = new Vector2Int(first.pos.x, first.pos.y + 2);
+                            posLastBot = new Vector2Int(last.pos.x + 1, first.pos.y + 2);
+
+                            if (first.pos.y < height - 1 &&
+                                last.pos.y < height - 1)
+                            {
+                                var nextFirst = this.tiles[first.pos.x, first.pos.y + 1];
+                                var nextLast = this.tiles[last.pos.x, last.pos.y + 1];
+                                if ((nextFirst.isWaterfall && nextFirst.isCliff) ||
+                                    (nextLast.isWaterfall && nextLast.isCliff) ||
+                                    (first.isMergeCliff || last.isMergeCliff))
+                                {
+                                    posFirstBot = new Vector2Int(first.pos.x, first.pos.y);
+                                    posLastBot = new Vector2Int(last.pos.x + 1, first.pos.y);
+                                }
+                            }
                         }
                     }
 
@@ -3442,13 +3537,33 @@ namespace TerrainGenerator
         private void ComputeDirtPatches()
         {
             patchList = PoissonDisk(new Vector4(0.0f, 0.0f, width, height), dirtPatchSeparation);
+            // Remove patches that collide with cliffs
+            var removeList = new List<Vector2>();
+            // for (var i = 0; i < patchList.Count; i++)
+            // {
+            //     var keep = KeepPatch(patchList[i]);
+            //     if (!keep)
+            //     {
+            //         removeList.Add(patchList[i]);
+            //     }
+            // }
+
             patchRandomList = new List<float>(patchList.Count);
             var patchExtraRandomList = new List<float>();
             
             var patchListCount = patchList.Count;
-            for (int i = 0; i < patchListCount; i++)
+            for (var i = 0; i < patchListCount; i++)
             {
                 var rRng = Random.Range(0.0f, 1.0f);
+                var r = dirtPatchRadiusMin * (1.0f - rRng) + dirtPatchRadiusMax * rRng;// < rRng2 ? rRng2 : rRng; 
+
+                var keep = KeepPatch(patchList[i], r);
+                if (!keep)
+                {
+                    removeList.Add(patchList[i]);
+                    continue;
+                }
+                
                 patchRandomList.Add(rRng);
                 var rng = Random.Range(0.0f, 1.0f);
                 var p = patchList[i];
@@ -3456,65 +3571,51 @@ namespace TerrainGenerator
                 {
                     var rngX = Random.Range(0.0f, 1.0f);
                     var rngY = Random.Range(0.0f, 1.0f);
-                    var r = dirtPatchRadiusMin * (1.0f - rRng) + dirtPatchRadiusMax * rRng;// < rRng2 ? rRng2 : rRng; 
-                    p += new Vector2(rngX, rngY).normalized * r * 1.15f;
-                    patchList.Add(p);
-                    patchExtraRandomList.Add(rRng);
+                    p += new Vector2(rngX, rngY).normalized * r * connectedPatchDistanceRadiusMultiplier;
+                    var pKeep = KeepPatch(p, r);
+                    if (pKeep)
+                    {
+                        patchList.Add(p);
+                        patchExtraRandomList.Add(rRng);
+                    }
                 }
                 if (rng > 0.4f)
                 {
                     var rngX = Random.Range(0.0f, 1.0f);
                     var rngY = Random.Range(0.0f, 1.0f);
-                    var r = dirtPatchRadiusMin * (1.0f - rRng) + dirtPatchRadiusMax * rRng;// < rRng2 ? rRng2 : rRng; 
-                    p += new Vector2(rngX, rngY).normalized * r * 1.15f;
-                    patchList.Add(p);
-                    patchExtraRandomList.Add(rRng);
+                    p += new Vector2(rngX, rngY).normalized * r * connectedPatchDistanceRadiusMultiplier;
+                    var pKeep = KeepPatch(p, r);
+                    if (pKeep)
+                    {
+                        patchList.Add(p);
+                        patchExtraRandomList.Add(rRng);
+                    }
                 }
             }
 
+            foreach (var patch in removeList)
+            {
+                patchList.Remove(patch);
+            }
+            
             for (var i = 0; i < patchExtraRandomList.Count; i++)
             {
                 patchRandomList.Add(patchExtraRandomList[i]);
             }
+        }
 
-            // Calculate distance to nearest patch center for all vertices in a tile.
-            // foreach (var tile in tiles)
-            // {
-            //     var mesh = flatTilePrefab.GetComponent<MeshFilter>().sharedMesh;
-            //     var vertices = mesh.vertices;
-            //     var vertexPosData = new Vector2[vertices.Length];
-            //     for (var i = 0; i < vertexPosData.Length; i++)
-            //     {
-            //         var v = vertices[i];
-            //         vertexPosData[i] = new Vector2(tile.pos.x + 0.5f, height - tile.pos.y + 0.5f);// + new Vector2(v.x + 0.5f, v.z + 0.5f);
-            //     }
-            //     
-            //     // Calculate smallest distance and angle for each vertex
-            //     var vertexPatchData = new List<Vector2>(vertexPosData.Length);
-            //     var distances = new float[vertexPosData.Length];
-            //     for (var i = 0; i < vertexPosData.Length; i++)
-            //     {
-            //         vertexPatchData.Add(new Vector2(0.0f, 0.0f));
-            //         distances[i] = width * width * height * height;
-            //     }
-            //
-            //     for (var i = 0; i < vertexPatchData.Count; i++)
-            //     {
-            //         var v = vertexPosData[i];
-            //         for (var k = 0; k < patchList.Count; k++)
-            //         {
-            //             var dist = Vector2.Distance(v, patchList[k]);
-            //             if (dist < distances[i])
-            //             {
-            //                 distances[i] = dist;
-            //                 vertexPatchData[i] = new Vector2(patchList[k].x, patchList[k].y);
-            //             }
-            //         }
-            //     }
-            //
-            //     // Store vertex dirt patch data for each tile
-            //     tile.vertexDirtPatchData = new List<Vector2>(vertexPatchData);
-            // }
+        private bool KeepPatch(Vector2 pos, float r)
+        {
+            var x = (int) pos.x;
+            var y = (int) (height - 1 - pos.y);
+            if (x < 0 || x >= width ||
+                y < 0 || y >= height)
+            {
+                return false;
+            }
+            
+            var tile = tiles[x, y];
+            return tile.riverValueCliff > r;
         }
         
         /// <summary>
