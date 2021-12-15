@@ -1490,7 +1490,7 @@ namespace TerrainGenerator
 
             if (tries == numAcres.x)
             {
-                throw new NotSupportedException("No place to spawn rivers");
+                return;
             }
             
             // Do acre river walk

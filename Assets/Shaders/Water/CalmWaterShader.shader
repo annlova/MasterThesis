@@ -170,6 +170,8 @@ Shader "Unlit/CalmWaterShader"
                 // float spec = pow(max(displacement.r+0.2, 0.0f), 32);
                 // float3 specular = specularStrength * spec * (1.0f).xxx;
                 // specular = clamp(0.0f, 1.0f, specular);
+
+                // return float4(displacement, 1.0f);
                 
                 // return float4(d,d,d, 1);
                 // return float4(waterColor2, 1.0f);

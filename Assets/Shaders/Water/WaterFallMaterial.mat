@@ -100,7 +100,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _WaveDisplacementTex:
-        m_Texture: {fileID: 2800000, guid: 692edc614f572cf4293ad9bfacef9ab2, type: 3}
+        m_Texture: {fileID: 2800000, guid: f40feb59eba301e46ba39ce7e93b3edd, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _WaveTex:

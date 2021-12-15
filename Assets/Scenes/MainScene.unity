@@ -7347,7 +7347,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35c68758dd3d29648aef0161962e8160, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  seed: 4
+  seed: 3
   spawnSlopes: 1
   spawnRivers: 1
   spawnDecorations: 1

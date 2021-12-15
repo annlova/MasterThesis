@@ -16,7 +16,7 @@ Shader "Unlit/WaterFallShader"
     }
     SubShader
     {
-        Tags { "Queue"="Geometry" "RenderType"="Opaque" }
+        Tags { "Queue"="Geometry+1" "RenderType"="Opaque" "LightMode" = "ForwardBase" }
         Blend SrcAlpha OneMinusSrcAlpha
 
         Pass
@@ -28,25 +28,22 @@ Shader "Unlit/WaterFallShader"
             #include "UnityCG.cginc"
             #include "UnityShaderVariables.cginc"
 
+            #pragma multi_compile_fwdbase
+            #include "AutoLight.cginc"
+
             float4 getColor(float2 st);
             float2 getDisplacementVector(float3 displacement, float displacementFactor);
             float3 ambient();
             float3 diffuse(float3 normal);
 
-            struct VertexAttributes
-            {
-                float4 pos : POSITION;
-                float2 uv : TEXCOORD0;
-                float2 uv2 : TEXCOORD1;
-            };
-
             struct FragmentAttributes
             {
-                float4 clipPos : POSITION;
+                float4 pos : POSITION;
                 float4 worldPos : TEXCOORD0;
                 float2 st : TEXCOORD1;
                 float2 dir : TEXCOORD2;
                 float4 screenPos : TEXCOORD3;
+                LIGHTING_COORDS(4,5)
             };
 
             sampler2D _FlowTex;
@@ -66,21 +63,23 @@ Shader "Unlit/WaterFallShader"
             float4x4 _ProjInverse;
             float4x4 _ViewInverse;
             
-            FragmentAttributes vert (VertexAttributes input)
+            FragmentAttributes vert (appdata_full v)
             {
                 // The output struct for the fragment stage.
                 FragmentAttributes output;
 
-                float4 modelPos = input.pos;
+                float4 modelPos = v.vertex;
 
                 output.worldPos = mul(unity_ObjectToWorld, modelPos);
-                output.clipPos = UnityObjectToClipPos(modelPos);
+                output.pos = UnityObjectToClipPos(modelPos);
                 
-                output.st = input.uv;
+                output.st = v.texcoord;
 
                 // Calm water shader vert
-                output.dir = input.uv2;
-                output.screenPos = ComputeScreenPos(output.clipPos);
+                output.dir = v.texcoord2;
+                output.screenPos = ComputeScreenPos(output.pos);
+
+                TRANSFER_VERTEX_TO_FRAGMENT(output);
                 
                 return output;
             }
@@ -197,6 +196,7 @@ Shader "Unlit/WaterFallShader"
                 // float3 specular = specularStrength * spec * (1.0f).xxx;
                 // specular = clamp(0.0f, 1.0f, specular);
 
+                // return (float4(displacement, 1.0f));
                 // return float4(waterColor2, 1.0f);
                 return float4(lerp(waterColor2, waterColor2 * 1.5f, alpha) * float3(0.3f, 0.99f, 1.2f), 1.0f);
                 return float4(outColor * min((1 - isWater), 1)
@@ -231,8 +231,16 @@ Shader "Unlit/WaterFallShader"
                 float4 outColor = float4((flowColor.xyz * flowColor.w + baseColor.xyz), 1.0f);
 
                 float4 calmColor = calmFragShader(input);
+
+                                /// Calculate if in shadow //
+                float attenuation = LIGHT_ATTENUATION(input);
+                // float inLight = step(1.0f, attenuation);
+                float shadowFactor = lerp(0.5f, 1.0f, attenuation);
+                /// 
                 
                 float4 c = (outColor * isFall + lerp(outColor, calmColor, topFactor) * isTop + calmColor * isBot);
+                c *= shadowFactor;
+                
                 return float4(c.rgb, 1.0f);
             }
 
