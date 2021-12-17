@@ -7347,7 +7347,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35c68758dd3d29648aef0161962e8160, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  seed: 3
+  seed: 233535
   spawnSlopes: 1
   spawnRivers: 1
   spawnDecorations: 1
@@ -10383,10 +10383,10 @@ MonoBehaviour:
   rockPrefab: {fileID: 2235921654663849865, guid: 7804eaa8ea94e0f45946ff99535053f3, type: 3}
   waterFallMistEmitter: {fileID: 1744689490}
   sparkleEmitter: {fileID: 405231427}
-  dirtPatchSeparation: 8
-  dirtPatchRadiusMin: 1
-  dirtPatchRadiusMax: 4
-  connectedPatchDistanceRadiusMultiplier: 1.1
+  dirtPatchSeparation: 15
+  dirtPatchRadiusMin: 2
+  dirtPatchRadiusMax: 5
+  connectedPatchDistanceRadiusMultiplier: 0.8
 --- !u!4 &1595967272
 Transform:
   m_ObjectHideFlags: 0

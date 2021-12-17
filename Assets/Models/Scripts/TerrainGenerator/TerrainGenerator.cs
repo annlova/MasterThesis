@@ -953,9 +953,22 @@ namespace TerrainGenerator
                 {
                     p.y = h * elevationHeight;
                     Instantiate(cliffTileFlat.prefab,  p, cliffTileFlat.prefab.transform.rotation, transform);
+                    if (prevElevation <= t.elevation)
+                    {
+                        Instantiate(cliffTileFlat.prefab,  p + Vector3.left * 2.0f + Vector3.up * 4.0f, cliffTileFlat.prefab.transform.rotation, transform);
+                        Instantiate(cliffTileFlat.prefab,  p + Vector3.left * 2.0f + Vector3.up * 8.0f, cliffTileFlat.prefab.transform.rotation, transform);
+                    }
                 }
                 Instantiate(cliffTileFlat.prefabRoof, p + Vector3.up * elevationHeight, cliffTileFlat.prefabRoof.transform.rotation, transform);
                 Instantiate(flatTilePrefab, p + Vector3.up * elevationHeight + Vector3.left, flatTilePrefab.transform.rotation, transform);
+                if (prevElevation <= t.elevation)
+                {
+                    Instantiate(cliffTileFlat.prefabRoof, p + Vector3.up * (elevationHeight + 8.0f) + Vector3.left * 2.0f, cliffTileFlat.prefabRoof.transform.rotation, transform);
+                    for (var x = 3; x < acreSize; x++)
+                    {
+                        Instantiate(flatTilePrefab, p + Vector3.up * (elevationHeight + 8.0f) + Vector3.left * x, flatTilePrefab.transform.rotation, transform);
+                    }
+                }
 
                 if (prevElevation > t.elevation)
                 {
@@ -970,6 +983,7 @@ namespace TerrainGenerator
                     int startH = t.elevation < 1 ? 0 : prevElevation + 1;
                     p.y = startH * elevationHeight - elevationHeight;
                     Instantiate(cliffTileCorner.prefab, p + Vector3.back, cliffTileCorner.prefab.transform.rotation, transform);
+                    // Instantiate(cliffTileCorner.prefab, p + Vector3.back * 2.0f + Vector3.up * 2.0f, cliffTileCorner.prefab.transform.rotation, transform);
                     for (int h = startH; h < prevElevation + 2; h++)
                     {
                         p.y = h * elevationHeight;
@@ -983,10 +997,26 @@ namespace TerrainGenerator
                             }
                         }
                     }
+
+                    for (int h = 1; h <= 4; h++)
+                    {
+                        Instantiate(cliffTileCorner.prefab, p + Vector3.left * 2.0f + Vector3.up * h * 2.0f, cliffTileCorner.prefab.transform.rotation, transform);
+                        for (int x = 3; x < (t.elevation < 1 ? acreSize : 2); x++)
+                        {
+                            Instantiate(cliffTileAway.prefab, p + Vector3.left * x + Vector3.up * h * 2.0f, cliffTileAway.prefab.transform.rotation, transform);
+                        }
+                    }
+                    
                     Instantiate(cliffTileCorner.prefabRoof, p + Vector3.up * elevationHeight + Vector3.back, cliffTileCorner.prefabRoof.transform.rotation, transform);
+                    Instantiate(cliffTileCorner.prefabRoof, p + Vector3.up * (elevationHeight + 8.0f) + Vector3.left * 2.0f, cliffTileCorner.prefabRoof.transform.rotation, transform);
                     for (int x = 1; x < (t.elevation < 1 ? acreSize : 2); x++)
                     {
                         Instantiate(cliffTileAway.prefabRoof, p + Vector3.up * elevationHeight + Vector3.back + Vector3.left * x, cliffTileAway.prefabRoof.transform.rotation, transform);
+                        Instantiate(flatTilePrefab, p + Vector3.up * elevationHeight + Vector3.left * x, flatTilePrefab.transform.rotation, transform);
+                        if (x > 1)
+                        {
+                            Instantiate(cliffTileAway.prefabRoof, p + Vector3.up * (elevationHeight + 8.0f) + Vector3.left * x, cliffTileAway.prefabRoof.transform.rotation, transform);
+                        }
                     }
                 }
                 if (t.elevation < 1)
@@ -1010,9 +1040,23 @@ namespace TerrainGenerator
                 {
                     p.y = h * elevationHeight;
                     Instantiate(cliffTileFlat.prefab,  p, cliffTileFlat.prefab.transform.rotation, transform);
+                    if (!(t.elevation == 0 && prevElevation > t.elevation))
+                    {
+                        Instantiate(cliffTileFlat.prefab,  p + Vector3.right * 2.0f + Vector3.up * 4.0f, cliffTileFlat.prefab.transform.rotation, transform);
+                        Instantiate(cliffTileFlat.prefab,  p + Vector3.right * 2.0f + Vector3.up * 8.0f, cliffTileFlat.prefab.transform.rotation, transform);
+                    }
                 }
                 Instantiate(cliffTileFlat.prefabRoof, p + Vector3.up * elevationHeight, cliffTileFlat.prefabRoof.transform.rotation, transform);
                 Instantiate(flatTilePrefab, p + Vector3.up * elevationHeight + Vector3.right, flatTilePrefab.transform.rotation, transform);
+
+                if (!(t.elevation == 0 && prevElevation > t.elevation))
+                {
+                    Instantiate(cliffTileFlat.prefabRoof, p + Vector3.up * (elevationHeight + 8.0f) + Vector3.right * 2.0f, cliffTileFlat.prefabRoof.transform.rotation, transform);
+                    for (var x = 3; x < acreSize; x++)
+                    {
+                        Instantiate(flatTilePrefab, p + Vector3.up * (elevationHeight + 8.0f) + Vector3.right * x, flatTilePrefab.transform.rotation, transform);
+                    }
+                }
 
                 if (prevElevation > t.elevation)
                 {
@@ -1040,10 +1084,42 @@ namespace TerrainGenerator
                             }
                         }
                     }
-                    Instantiate(cliffTileCorner.prefabRoof, p + Vector3.up * elevationHeight + Vector3.back, cliffTileCorner.prefabRoof.transform.rotation, transform);
-                    for (int x = 1; x < (t.elevation < 1 ? acreSize : 2); x++)
+                    
+                    var offset = t.elevation > 0 ? 1.0f : 0.0f;
+                    for (int h = t.elevation < 1 ? 1 : prevElevation + 2; h <= 4; h++)
                     {
-                        Instantiate(cliffTileAway.prefabRoof, p + Vector3.up * elevationHeight + Vector3.back + Vector3.right * x, cliffTileAway.prefabRoof.transform.rotation, transform);
+                        Instantiate(cliffTileCorner.prefab, p + Vector3.right * 2.0f + Vector3.up * h * 2.0f + Vector3.back * offset, cliffTileCorner.prefab.transform.rotation, transform);
+                        for (int x = 3; x < acreSize; x++)
+                        {
+                            Instantiate(cliffTileAway.prefab, p + Vector3.right * x + Vector3.up * h * 2.0f + Vector3.back * offset, cliffTileAway.prefab.transform.rotation, transform);
+                        }
+                    }
+                    
+                    Instantiate(cliffTileCorner.prefabRoof, p + Vector3.up * elevationHeight + Vector3.back, cliffTileCorner.prefabRoof.transform.rotation, transform);
+                    Instantiate(cliffTileCorner.prefabRoof, p + Vector3.up * (elevationHeight + 8.0f) + Vector3.right * 2.0f + Vector3.back * offset, cliffTileCorner.prefabRoof.transform.rotation, transform);
+                    for (int x = 1; x < acreSize; x++)
+                    {
+                        if (t.elevation >= 1)
+                        {
+                            if (x < 2)
+                            {
+                                Instantiate(cliffTileAway.prefabRoof, p + Vector3.up * elevationHeight + Vector3.back + Vector3.right * x, cliffTileAway.prefabRoof.transform.rotation, transform);
+                            }
+                            else if (x > 2)
+                            {
+                                Instantiate(cliffTileAway.prefabRoof, p + Vector3.up * (elevationHeight + 8.0f) + Vector3.back + Vector3.right * x, cliffTileAway.prefabRoof.transform.rotation, transform);
+                            }
+                        }
+                        else if (t.elevation < 1)
+                        {
+                            Instantiate(cliffTileAway.prefabRoof, p + Vector3.up * elevationHeight + Vector3.back * (1.0f + offset) + Vector3.right * x, cliffTileAway.prefabRoof.transform.rotation, transform);
+                            Instantiate(flatTilePrefab, p + Vector3.up * elevationHeight + Vector3.right * x, flatTilePrefab.transform.rotation, transform);
+                            
+                            if (x > 2)
+                            {
+                                Instantiate(cliffTileAway.prefabRoof, p + Vector3.up * (elevationHeight + 8.0f) + Vector3.right * x, cliffTileAway.prefabRoof.transform.rotation, transform);
+                            }
+                        }
                     }
                 }
                 if (t.elevation < 1)
@@ -1061,12 +1137,47 @@ namespace TerrainGenerator
             for (int i = -2; i < numAcres.x * acreSize + 2; i++)
             {
                 var p = new Vector3(i + 0.5f, t.elevation * 2.0f, height - 1 + 1.5f);
-                Instantiate(cliffTileFlat.prefab, p, cliffTileFlat.prefab.transform.rotation, transform);
-                Instantiate(cliffTileFlat.prefab, p + Vector3.up * 2.0f, cliffTileFlat.prefab.transform.rotation, transform);
-                for (int z = 0; z < 3; z++)
+
+                var waterfall = false;
+                if (i >= 0 && i < width)
                 {
-                    Instantiate(flatTilePrefab, p + Vector3.up * 4.0f + Vector3.forward * z, flatTilePrefab.transform.rotation, transform);
+                    waterfall = tiles[i, 0].acre.hasRiverNorth;
                 }
+
+                if (waterfall && i % acreSize == acreSize / 2 - (riverWidth - 2) / 2)
+                {
+                    var wp = new Vector3(i, t.elevation * 2.0f + 4.0f, height);
+                    // CreateWaterfall(wp, wp + Vector3.right * 2.0f, wp + Vector3.down * 2.0f, wp + Vector3.down * 2.0f + Vector3.right * 2.0f,
+                    //                 wp + Vector3.forward * 3.0f, wp + Vector3.forward * 3.0f + Vector3.right * 2.0f,
+                    //                 wp + Vector3.down * 2.0f, wp + Vector3.down * 2.0f + Vector3.right * 2.0f, 0.0f);
+                    Vector3 right = Vector3.right * (riverWidth - 2);
+                    Vector3 down = Vector3.down * (4.0f + riverSurfaceOffset);
+                    Vector3 forward = Vector3.forward * 3.0f;
+                    CreateWaterfall(Vector3.zero, right, down, down + right, 
+                                    forward, forward + right,
+                                    down, down + right, wp, Vector2Int.up);
+                }
+                else if (waterfall &&
+                        i % acreSize >= acreSize / 2 - (riverWidth - 2) / 2 &&
+                        i % acreSize <= acreSize / 2 + (riverWidth - 2) / 2)
+                {
+                    
+                }
+                else
+                {
+                    Instantiate(cliffTileFlat.prefab, p, cliffTileFlat.prefab.transform.rotation, transform);
+                    Instantiate(cliffTileFlat.prefab, p + Vector3.up * 2.0f, cliffTileFlat.prefab.transform.rotation, transform);
+                    
+                    for (int z = 0; z < 3; z++)
+                    {
+                        Instantiate(flatTilePrefab, p + Vector3.up * 4.0f + Vector3.forward * z, flatTilePrefab.transform.rotation, transform);
+                    }
+                }
+
+                Instantiate(cliffTileFlat.prefab, p + Vector3.forward * 3.0f + Vector3.up * 4.0f, cliffTileFlat.prefab.transform.rotation, transform);
+                Instantiate(cliffTileFlat.prefab, p + Vector3.forward * 3.0f + Vector3.up * 6.0f, cliffTileFlat.prefab.transform.rotation, transform);
+                Instantiate(cliffTileFlat.prefab, p + Vector3.forward * 3.0f + Vector3.up * 8.0f, cliffTileFlat.prefab.transform.rotation, transform);
+                Instantiate(cliffTileFlat.prefab, p + Vector3.forward * 3.0f + Vector3.up * 10.0f, cliffTileFlat.prefab.transform.rotation, transform);
             }
         }
 
@@ -3450,6 +3561,11 @@ namespace TerrainGenerator
 
         private void ComputeTileVertexPatchData(Tile tile, GameObject prefab)
         {
+            if (patchList.Count < 2)
+            {
+                return;
+            }
+            
             var mesh = prefab.GetComponent<MeshFilter>().mesh;
             var vertices = mesh.vertices;
             var uv2 = new Vector2[vertices.Length];
@@ -3460,6 +3576,7 @@ namespace TerrainGenerator
             float distance = width * width * height * height;
             float distance2 = width * width * height * height;
             var closest = new int[2];
+            
             for (var k = 0; k < patchList.Count; k++)
             {
                 var dist = Vector2.Distance(pos, patchList[k]);
@@ -3567,7 +3684,7 @@ namespace TerrainGenerator
                 patchRandomList.Add(rRng);
                 var rng = Random.Range(0.0f, 1.0f);
                 var p = patchList[i];
-                if (rng > 0.85f)
+                if (rng > 0.8f)
                 {
                     var rngX = Random.Range(0.0f, 1.0f);
                     var rngY = Random.Range(0.0f, 1.0f);
@@ -3579,7 +3696,7 @@ namespace TerrainGenerator
                         patchExtraRandomList.Add(rRng);
                     }
                 }
-                if (rng > 0.4f)
+                if (rng > 0.5f)
                 {
                     var rngX = Random.Range(0.0f, 1.0f);
                     var rngY = Random.Range(0.0f, 1.0f);
@@ -3602,6 +3719,8 @@ namespace TerrainGenerator
             {
                 patchRandomList.Add(patchExtraRandomList[i]);
             }
+            
+            // Debug.Log(patchList.Count);
         }
 
         private bool KeepPatch(Vector2 pos, float r)
@@ -3613,9 +3732,36 @@ namespace TerrainGenerator
             {
                 return false;
             }
-            
+
             var tile = tiles[x, y];
+            var p = new Vector2Int(tile.acre.pos.x * acreSize, height - 1 - tile.acre.pos.y * acreSize);
+
+            var i_min = p + new Vector2Int(acreSize / 2 - (riverWidth - 2) / 2, -acreSize);
+            var i_max = p + new Vector2Int(acreSize / 2 + (riverWidth - 2) / 2, 0);
+            var min = new Vector2(i_min.x, i_min.y);
+            var max = new Vector2(i_max.x, i_max.y);
+            var col = TestSphereAABB(pos, r, min, max);
+            
+            i_min = p + new Vector2Int(0, -(acreSize / 2 + (riverWidth - 2) / 2));
+            i_max = p + new Vector2Int(acreSize, -(acreSize / 2 - (riverWidth - 2) / 2));
+            min = new Vector2(i_min.x, i_min.y);
+            max = new Vector2(i_max.x, i_max.y);
+            col |= TestSphereAABB(pos, r, min, max);
+
+            if (col && tile.acre.hasRiver)
+            {
+                return false;
+            }
+            
+            // Debug.Log(i_min + " " + i_max + " " + pos + " ");
+
             return tile.riverValueCliff > r;
+        }
+        
+        bool TestSphereAABB(Vector2 c, float r, Vector2 min, Vector2 max)
+        {
+            var sqDist = SqDistPointAABB(c, min, max);
+            return sqDist <= r * r;
         }
         
         /// <summary>

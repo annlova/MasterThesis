@@ -51,6 +51,14 @@ Material:
         m_Texture: {fileID: 2800000, guid: 01cd17a2f8af3c843a15dfbd63fe2621, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _DirtRoughness:
+        m_Texture: {fileID: 2800000, guid: a8eaf33582495204cb2d1ea629f064ad, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DirtStoneMask:
+        m_Texture: {fileID: 2800000, guid: d6707e8f0c2c1ac489ae059d5128338a, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _DirtTexture:
         m_Texture: {fileID: 2800000, guid: a7949115e29bf4c49bfa85b1c00f40d1, type: 3}
         m_Scale: {x: 1, y: 1}
