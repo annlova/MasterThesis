@@ -226,9 +226,9 @@ Shader "Unlit/WaterFallShader"
                 float2 scrolledSt = float2(input.st.x, stY + timeFactor * 4);
                 float2 displacedSt = getDisplacementVector(displacement, displacementFactor) + scrolledSt;
                 
-                float4 baseColor = tex2D(_ColorTex, displacedSt * 0.5);
-                float4 flowColor = tex2D(_FlowTex, displacedSt * 0.8);
-                float4 outColor = float4((flowColor.xyz * flowColor.w + baseColor.xyz), 1.0f);
+                float4 baseColor = tex2D(_ColorTex, displacedSt * 0.1);
+                float4 flowColor = tex2D(_FlowTex, displacedSt * 0.8f);
+                float4 outColor = float4(flowColor.xyz * flowColor.w + baseColor.xyz, 1.0f);
 
                 float4 calmColor = calmFragShader(input);
 

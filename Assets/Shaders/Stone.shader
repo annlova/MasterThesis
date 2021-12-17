@@ -1,4 +1,4 @@
-Shader "Unlit/CliffShader"
+Shader "Unlit/Stone"
 {
     Properties
     {
@@ -100,11 +100,11 @@ Shader "Unlit/CliffShader"
 
                 float3 cameraDir = normalize(_WorldSpaceCameraPos - input.worldPos.xyz);
 
-                float3 roughness = tex2D(_SpecMap, calculateTextureUV(input.st, input.cliffTextureNumber, 3.0)).rgb;
-                float specularStrength = 20.0f;
+                float3 roughness = tex2D(_SpecMap, calculateTextureUV(input.st / 5.0f, input.cliffTextureNumber, 1.0f)).rgb;
+                float specularStrength = .355f;
                 float3 lightDir = normalize(float3(0.0f, 1.0f, 1.0f));
                 float3 reflectDir = reflect(-lightDir, float3(0.0f, 1.0f, 0.0f));
-                float spec = pow(max(dot(cameraDir, reflectDir), 0.0f), 32);
+                float spec = pow(max(dot(cameraDir, reflectDir), 0.0f), 8);
                 float3 specular = specularStrength * spec * roughness.rgb;
                 
                 float ambient = 0.2f;
@@ -112,8 +112,8 @@ Shader "Unlit/CliffShader"
                 float3 outColor = color * (ambient + diffuse(normal, _WorldSpaceLightPos0) * attenuation);
                 
                 float d = dot(_WorldSpaceLightPos0, normal);
-                float3 diffColor = float3(0.3, 0.3f, 0.3f);
-                // float3 diffColor = tex2D(_MainTex, st);
+                // float3 diffColor = float3(0.3, 0.3f, 0.3f);
+                float3 diffColor = tex2D(_MainTex, st);
                 outColor = diffColor * ambient + diffColor * (d * d + 0.2f) * attenuation + specular * attenuation * 1.0f;
                 return float4(outColor, 1.0f);
             }
