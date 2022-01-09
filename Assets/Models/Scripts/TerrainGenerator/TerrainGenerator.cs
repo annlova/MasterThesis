@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Xml.Schema;
+using FMOD;
 using Microsoft.Win32.SafeHandles;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Analytics;
 using UnityEngine.Assertions;
 using UnityEngine.Rendering;
+using Debug = UnityEngine.Debug;
 using Random = UnityEngine.Random;
 
 namespace TerrainGenerator
@@ -231,6 +233,7 @@ namespace TerrainGenerator
         // Start is called before the first frame update
         void Start()
         {
+            var totalTime = Time.realtimeSinceStartupAsDouble;
             if (seed != 0)
             {
                 Random.InitState(seed);
@@ -246,29 +249,55 @@ namespace TerrainGenerator
                 }
             }
 
+            var  cliffTime = Time.realtimeSinceStartupAsDouble - totalTime;
+            
             InitPossibleFloors();
             LevelTerrain();
+            var  floorTime = Time.realtimeSinceStartupAsDouble - totalTime - cliffTime;
             ComputeCliffFloors();
+            var  cliffFloorTime = Time.realtimeSinceStartupAsDouble - totalTime - cliffTime - floorTime;
             ComputeRiverMeta();
             if (spawnRivers)
             {
                 ComputeRivers();
             }
+            var  riverTime = Time.realtimeSinceStartupAsDouble - totalTime - cliffTime - floorTime - cliffFloorTime;
             if (spawnSlopes)
             {
                 ComputeSlopes();
             }
+            var  slopeTime = Time.realtimeSinceStartupAsDouble - totalTime - cliffTime - floorTime - cliffFloorTime -
+                            riverTime;
             if (spawnDecorations)
             {
                 SpawnDecorations();
             }
+            var  decoTime = Time.realtimeSinceStartupAsDouble - totalTime - cliffTime - floorTime - cliffFloorTime -
+                           riverTime - slopeTime;
             if (spawnWaterfalls)
             {
                 ComputeWaterfalls();
             }
+            var  waterfallTime = Time.realtimeSinceStartupAsDouble - totalTime - cliffTime - floorTime - cliffFloorTime -
+                                riverTime - slopeTime - decoTime;
             ComputeDirtPatches();
+            var dirtTime = Time.realtimeSinceStartupAsDouble - totalTime - cliffTime - floorTime - cliffFloorTime -
+                                riverTime - slopeTime - decoTime - waterfallTime;
             CreateTerrainMesh();
+            var terrainTime = Time.realtimeSinceStartupAsDouble - totalTime - cliffTime - floorTime - cliffFloorTime -
+                                riverTime - slopeTime - decoTime - waterfallTime - dirtTime;
             UpdateShaderVariables();
+            totalTime = Time.realtimeSinceStartupAsDouble - totalTime;
+            Debug.Log(totalTime + "\n" + 
+                cliffTime + "\n" +
+                floorTime + "\n" +
+                cliffFloorTime + "\n" +
+                riverTime + "\n" +
+                slopeTime + "\n" +
+                decoTime + "\n" +
+                waterfallTime + "\n" +
+                dirtTime + "\n" +
+                terrainTime);
         }
 
         private bool done = false;
